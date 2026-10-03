@@ -1,0 +1,40 @@
+import type { EventResult } from "@/engine";
+
+export function ResultsTable({
+  results,
+  nameOf,
+}: {
+  results: Map<string, EventResult>;
+  nameOf: (id: string) => string;
+}) {
+  const rows = [...results].sort((a, b) => b[1].points - a[1].points || a[1].rank - b[1].rank);
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse font-mono text-sm">
+        <caption className="sr-only">League points earned</caption>
+        <thead>
+          <tr className="border-b border-border text-[11px] tracking-widest text-muted uppercase">
+            <th scope="col" className="p-2 text-left">
+              Player
+            </th>
+            <th scope="col" className="p-2 text-left">
+              Result
+            </th>
+            <th scope="col" className="p-2 text-right">
+              League pts
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(([id, r]) => (
+            <tr key={id} className="border-b border-border">
+              <td className="p-2 font-sans text-base font-semibold">{nameOf(id)}</td>
+              <td className={r.label === "Champion" ? "p-2 text-warn" : "p-2"}>{r.label}</td>
+              <td className="p-2 text-right font-bold text-cyan">+{r.points}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}

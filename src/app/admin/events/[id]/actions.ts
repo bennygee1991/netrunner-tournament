@@ -1,0 +1,117 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { adminActor } from "@/lib/auth/admin-action";
+import { db } from "@/lib/db";
+import { type FormState, str } from "@/lib/forms/state";
+import { opFinish, opPairNext, opSetResult, opStartCut, opStartSwiss } from "@/lib/tournament/ops";
+import {
+  addPlayerByName,
+  approveAllSignups,
+  approveSignup,
+  rejectSignup,
+  removeEntrant,
+} from "@/lib/tournament/registration";
+import { cryptoRng } from "@/lib/tournament/rng";
+import { updateEventSetup } from "@/lib/tournament/season";
+
+function refresh(eventId: string) {
+  revalidatePath(`/admin/events/${eventId}`);
+  revalidatePath(`/events/${eventId}`);
+  revalidatePath("/events");
+  revalidatePath("/admin/season");
+  revalidatePath("/");
+}
+
+type Res =
+  { ok: true; message?: string } | { ok: false; error?: string; fieldErrors?: FormState["fieldErrors"] };
+
+async function finish(eventId: string, res: Res, okMessage?: string): Promise<FormState> {
+  if (!res.ok) return { error: res.error, fieldErrors: res.fieldErrors };
+  refresh(eventId);
+  return { message: ("message" in res && res.message) || okMessage };
+}
+
+export async function setupAction(_p: FormState, form: FormData): Promise<FormState> {
+  const actor = await adminActor();
+  const eventId = str(form, "eventId");
+  const input = {
+    name: str(form, "name"),
+    date: str(form, "date"),
+    month: str(form, "month"),
+    matchFormat: str(form, "matchFormat"),
+    swissRounds: str(form, "swissRounds"),
+    cutSize: str(form, "cutSize"),
+  };
+  const res = await updateEventSetup(db, actor, eventId, input);
+  return finish(eventId, res, "Event saved.");
+}
+
+export async function approveAction(_p: FormState, form: FormData): Promise<FormState> {
+  const actor = await adminActor();
+  const eventId = str(form, "eventId");
+  return finish(eventId, await approveSignup(db, actor, eventId, str(form, "userId")));
+}
+
+export async function rejectAction(_p: FormState, form: FormData): Promise<FormState> {
+  const actor = await adminActor();
+  const eventId = str(form, "eventId");
+  return finish(eventId, await rejectSignup(db, actor, eventId, str(form, "userId")));
+}
+
+export async function approveAllAction(_p: FormState, form: FormData): Promise<FormState> {
+  const actor = await adminActor();
+  const eventId = str(form, "eventId");
+  return finish(eventId, await approveAllSignups(db, actor, eventId));
+}
+
+export async function addPlayerAction(_p: FormState, form: FormData): Promise<FormState> {
+  const actor = await adminActor();
+  const eventId = str(form, "eventId");
+  return finish(eventId, await addPlayerByName(db, actor, eventId, str(form, "name")));
+}
+
+export async function removeEntrantAction(_p: FormState, form: FormData): Promise<FormState> {
+  const actor = await adminActor();
+  const eventId = str(form, "eventId");
+  return finish(eventId, await removeEntrant(db, actor, eventId, str(form, "entrantId")));
+}
+
+export async function startSwissAction(_p: FormState, form: FormData): Promise<FormState> {
+  const actor = await adminActor();
+  const eventId = str(form, "eventId");
+  return finish(eventId, await opStartSwiss(db, actor, eventId, cryptoRng, str(form, "version")));
+}
+
+export async function pairNextAction(_p: FormState, form: FormData): Promise<FormState> {
+  const actor = await adminActor();
+  const eventId = str(form, "eventId");
+  return finish(eventId, await opPairNext(db, actor, eventId, cryptoRng, str(form, "version")));
+}
+
+export async function startCutAction(_p: FormState, form: FormData): Promise<FormState> {
+  const actor = await adminActor();
+  const eventId = str(form, "eventId");
+  return finish(eventId, await opStartCut(db, actor, eventId, cryptoRng, str(form, "version")));
+}
+
+export async function finishAction(_p: FormState, form: FormData): Promise<FormState> {
+  const actor = await adminActor();
+  const eventId = str(form, "eventId");
+  return finish(eventId, await opFinish(db, actor, eventId, str(form, "version")));
+}
+
+export async function resultAction(_p: FormState, form: FormData): Promise<FormState> {
+  const actor = await adminActor();
+  const eventId = str(form, "eventId");
+  const input = {
+    phase: str(form, "phase"),
+    round: str(form, "round"),
+    match: str(form, "match"),
+    game: str(form, "game"),
+    result: str(form, "result"),
+    a: str(form, "a"),
+    b: str(form, "b"),
+  };
+  return finish(eventId, await opSetResult(db, actor, eventId, input, cryptoRng));
+}

@@ -28,7 +28,7 @@ export async function login(page: Page, runnerName: string, password = PASSWORD)
 
 export async function logout(page: Page) {
   await page.getByRole("button", { name: "Log out" }).click();
-  await expect(page.getByRole("link", { name: "Log in" })).toBeVisible();
+  await expect(page.getByRole("banner").getByRole("link", { name: "Log in" })).toBeVisible();
 }
 
 /** The form's error message (Next.js also renders an empty role=alert route announcer). */

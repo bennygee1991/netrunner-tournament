@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("home page renders with navigation", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1, name: "Netrunner Circuit" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "The Circuit" })).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Main" })).toBeVisible();
 });
 

@@ -3,15 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { adminDelete, adminIssueTempPassword, adminRename, adminSetDisabled } from "@/lib/auth/accounts";
-import { assertSameOrigin, requireAdmin } from "@/lib/auth/server";
+import { adminActor } from "@/lib/auth/admin-action";
 import { db } from "@/lib/db";
 import { type FormState, str } from "@/lib/forms/state";
-
-async function adminActor() {
-  await assertSameOrigin();
-  const admin = await requireAdmin();
-  return { id: admin.id, runnerName: admin.runnerName };
-}
 
 export type TempPasswordState = FormState & { tempPassword?: string };
 
