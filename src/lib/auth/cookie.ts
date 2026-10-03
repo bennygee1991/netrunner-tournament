@@ -1,8 +1,8 @@
 import { SESSION_TTL_MS } from "./tokens";
 
-/** Secure cookies need HTTPS; local http dev/e2e uses the plain name. */
+/** Secure cookies need HTTPS (always the case on Vercel); local http dev/e2e uses the plain name. */
 export function isSecureDeployment(): boolean {
-  return (process.env.APP_URL ?? "").startsWith("https://");
+  return process.env.VERCEL === "1" || (process.env.APP_URL ?? "").startsWith("https://");
 }
 
 /** `__Host-` prefix pins the cookie to this exact host, HTTPS only, path=/. */

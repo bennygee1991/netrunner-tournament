@@ -69,7 +69,10 @@ export async function assertSameOrigin() {
 function allowedOrigins(): string[] {
   const list: string[] = [];
   if (process.env.APP_URL) list.push(new URL(process.env.APP_URL).origin);
-  // Vercel sets VERCEL_URL to the deployment's own host (used by preview deployments).
-  if (process.env.VERCEL_URL) list.push(`https://${process.env.VERCEL_URL}`);
+  // Vercel's own hosts: the production domain, this deployment, and the branch preview.
+  for (const v of ["VERCEL_PROJECT_PRODUCTION_URL", "VERCEL_URL", "VERCEL_BRANCH_URL"]) {
+    const host = process.env[v];
+    if (host) list.push(`https://${host}`);
+  }
   return list;
 }

@@ -20,7 +20,12 @@ export function StandingsTable({
 }) {
   if (!standings.length) return <p className="text-muted">Standings appear once Swiss starts.</p>;
   return (
-    <div className="overflow-x-auto">
+    <div
+      className="overflow-x-auto"
+      tabIndex={0}
+      role="region"
+      aria-label="Swiss standings (scrolls sideways)"
+    >
       <table className="w-full border-collapse font-mono text-sm">
         <caption className="sr-only">Swiss standings</caption>
         <thead>

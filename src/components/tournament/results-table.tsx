@@ -13,7 +13,12 @@ export function ResultsTable({
 }) {
   const rows = [...results].sort((a, b) => b[1].points - a[1].points || a[1].rank - b[1].rank);
   return (
-    <div className="overflow-x-auto">
+    <div
+      className="overflow-x-auto"
+      tabIndex={0}
+      role="region"
+      aria-label="League points earned (scrolls sideways)"
+    >
       <table className="w-full border-collapse font-mono text-sm">
         <caption className="sr-only">League points earned</caption>
         <thead>

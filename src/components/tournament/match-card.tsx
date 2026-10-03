@@ -18,7 +18,7 @@ function Player({
       className={cx(
         "flex min-w-0 flex-1 flex-col items-center justify-center rounded border px-2 py-2 text-center",
         state === "won" ? "border-ok text-ok" : "border-border",
-        state === "lost" && "opacity-60",
+        state === "lost" && "border-dashed text-muted",
       )}
     >
       <span className="w-full truncate font-semibold">{name}</span>

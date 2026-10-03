@@ -37,6 +37,7 @@ const LABELS: Record<string, string> = {
   "player.enable": "Enabled account",
   "player.delete": "Deleted account",
   "player.link_guest": "Linked walk-in results",
+  "system.backup_download": "Downloaded backup",
 };
 
 /** Compact one-line summary of the detail JSON (before/after first). */

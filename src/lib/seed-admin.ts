@@ -15,6 +15,11 @@ export async function seedAdmin(
   const existing = await db.user.findFirst({ where: { role: "ADMIN" }, select: { id: true } });
   if (existing) return { status: "skipped", reason: "An admin account already exists." };
 
+  if (!env.ADMIN_RUNNER_NAME && !env.ADMIN_PASSWORD) {
+    throw new Error(
+      "No admin account exists yet. Set ADMIN_RUNNER_NAME and ADMIN_PASSWORD (see README, step 'Environment variables') and deploy again.",
+    );
+  }
   const parsedName = runnerNameSchema.safeParse(env.ADMIN_RUNNER_NAME ?? "");
   if (!parsedName.success) {
     throw new Error(`ADMIN_RUNNER_NAME is invalid: ${parsedName.error.issues[0]?.message}`);

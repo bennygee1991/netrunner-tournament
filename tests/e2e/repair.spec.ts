@@ -147,3 +147,27 @@ test("archive the season, then reset everything", async ({ page }) => {
   await page.getByRole("button", { name: "Wipe all data" }).click();
   await expect(page.getByText("Everything was reset.")).toBeVisible();
 });
+
+test("admin downloads a backup", async ({ page }) => {
+  await loginOk(page, E2E_ADMIN.runnerName, E2E_ADMIN.password);
+  await page.goto("/admin");
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download backup" }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toMatch(/^circuit-backup-\d{4}-\d{2}-\d{2}\.json$/);
+  const text = await (await import("node:fs/promises")).readFile((await file.path())!, "utf8");
+  const json = JSON.parse(text);
+  expect(json.format).toBe("netrunner-circuit-backup");
+  expect(json.counts.user).toBeGreaterThan(0);
+  expect(text).not.toContain("nc_session");
+});
+
+test("players cannot download backups", async ({ page, request }) => {
+  const res = await request.post("/admin/backup", {
+    headers: { origin: "http://localhost:3100" },
+    maxRedirects: 0,
+  });
+  expect([303, 307, 308, 404]).toContain(res.status());
+  expect(await res.text()).not.toContain("netrunner-circuit-backup");
+  void page;
+});

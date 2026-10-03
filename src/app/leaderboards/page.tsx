@@ -58,7 +58,12 @@ function BoardTable({ board }: { board: BoardView }) {
     );
   }
   return (
-    <div className="overflow-x-auto">
+    <div
+      className="overflow-x-auto"
+      tabIndex={0}
+      role="region"
+      aria-label={`${board.title} leaderboard (scrolls sideways)`}
+    >
       <table className="w-full border-collapse font-mono text-sm">
         <caption className="sr-only">{board.title} leaderboard</caption>
         <thead>

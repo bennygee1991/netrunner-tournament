@@ -62,6 +62,19 @@ export default async function AdminDashboard() {
           {season ? "Manage season" : "Start a season"}
         </Link>
       </Card>
+      <Card tone="warn">
+        <CardTitle>Backup</CardTitle>
+        <p className="mb-3 text-sm text-muted">
+          Download everything (players, seasons, events, results, trophies, audit log) as one file. Keep it
+          somewhere private: it contains emails and scrambled passwords. Do this before archiving a season or
+          resetting.
+        </p>
+        <form method="post" action="/admin/backup">
+          <button type="submit" className={buttonStyles.secondary}>
+            Download backup
+          </button>
+        </form>
+      </Card>
     </>
   );
 }

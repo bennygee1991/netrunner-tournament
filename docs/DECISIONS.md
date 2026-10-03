@@ -7,13 +7,15 @@ Owner-approved decisions (2026-10-03):
 | Hosting | Vercel (app) + Neon (Postgres). Owner provisions accounts by following the README; nothing is provisioned by Claude. |
 | Email | None: no notifications, no email reset (owner: lower cost). Admin issues one-time temporary passwords. Email field stays optional. |
 | Domain | Free `*.vercel.app` address to start; custom domain can be added later. |
-| Backups | Neon point-in-time restore + nightly `pg_dump` GitHub Action (private artifact, 90 days) + admin "download backup" button. |
+| Backups | Admin "Download backup" (JSON, restorable with `pnpm db:restore`) + nightly `pg_dump` GitHub Action, **encrypted with a passphrase** (artifacts of public repos are downloadable by any GitHub user), kept 90 days + Neon restore points. |
 | Rate limiting | Postgres-backed fixed-window buckets (`RateLimit` table); no extra service. |
 | Time zone | Configurable via `APP_TIMEZONE` (default UTC). |
 | Sessions | Own implementation: random 256-bit token in an HttpOnly/Secure/SameSite=Lax cookie; SHA-256 of the token stored in `Session`. 30-day sliding expiry. Revoked on password change / disable. |
 | Runner names | ASCII letters, digits, space, `_`, `-` (3-24). ASCII-only avoids look-alike Unicode impersonation. |
 | Prisma | 7.10 (latest stable; 8.x is still a release candidate), `prisma-client` generator + `@prisma/adapter-pg`. |
 | Fonts | System font stacks (no build-time font download). |
+| Deploy | Vercel runs `vercel-build`: prisma generate, migrate deploy (via `DIRECT_URL`), idempotent admin seed, next build. Cookies are Secure on Vercel; allowed form origins include the Vercel production/preview hosts plus `APP_URL`. |
+| Accessibility | axe-core (WCAG 2.1 A/AA) scans every page in dark and light themes as part of `pnpm e2e`. |
 
 ## What the prototype settles (reference/prototype.html, read 2026-10-03)
 

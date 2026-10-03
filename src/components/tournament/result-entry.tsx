@@ -36,7 +36,7 @@ function Buttons({
               ? "border-warn text-warn"
               : "border-ok bg-ok/10 text-ok"
             : "border-border hover:border-cyan",
-          current && !on && "opacity-60",
+          current && !on && "border-dashed text-muted",
           value === "D" && "max-w-20 flex-none font-mono text-xs uppercase",
         )}
       >
