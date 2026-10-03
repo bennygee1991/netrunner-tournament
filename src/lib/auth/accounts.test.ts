@@ -226,6 +226,15 @@ describe.skipIf(!hasTestDb)("accounts (database)", () => {
       expect(readPrefs(user.prefs).theme).toBe("light");
       expect(user.email).toBe("a@b.co");
       expect((await updateProfile(db, r.userId, { theme: "neon", email: "" })).ok).toBe(false);
+      expect(await updateProfile(db, r.userId, { theme: "light", email: "", avatar: "eye-cyan" })).toEqual({
+        ok: true,
+      });
+      expect((await db.user.findUniqueOrThrow({ where: { id: r.userId } })).avatar).toBe("eye-cyan");
+      expect(
+        (await updateProfile(db, r.userId, { theme: "light", email: "", avatar: "<svg onload=x>" })).ok,
+      ).toBe(false);
+      await updateProfile(db, r.userId, { theme: "light", email: "", avatar: "" });
+      expect((await db.user.findUniqueOrThrow({ where: { id: r.userId } })).avatar).toBeNull();
     });
   });
 

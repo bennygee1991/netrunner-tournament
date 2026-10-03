@@ -56,6 +56,8 @@ model User {
   disabledAt         DateTime?
   /// Short public bio shown on the profile page (plain text, max 280 chars).
   bio                String?
+  /// Chosen preset avatar key (see src/lib/avatars.ts); null = automatic default.
+  avatar             String?
   /// Display preferences (JSON object, validated with zod in the app).
   prefs              Json      @default("{}")
   createdAt          DateTime  @default(now())

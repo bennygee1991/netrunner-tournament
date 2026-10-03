@@ -16,7 +16,15 @@ export default async function AccountPage({ searchParams }: PageProps<"/account"
   const sp = await searchParams;
   const user = await db.user.findUniqueOrThrow({
     where: { id: sessionUser.id },
-    select: { runnerName: true, email: true, prefs: true, role: true, createdAt: true, bio: true },
+    select: {
+      runnerName: true,
+      email: true,
+      prefs: true,
+      role: true,
+      createdAt: true,
+      bio: true,
+      avatar: true,
+    },
   });
   const records = await db.eventRecord.findMany({
     where: { userId: sessionUser.id },
@@ -48,7 +56,13 @@ export default async function AccountPage({ searchParams }: PageProps<"/account"
             View public profile
           </Link>
         </p>
-        <ProfileForm theme={readPrefs(user.prefs).theme} email={user.email ?? ""} bio={user.bio ?? ""} />
+        <ProfileForm
+          theme={readPrefs(user.prefs).theme}
+          email={user.email ?? ""}
+          bio={user.bio ?? ""}
+          avatar={user.avatar ?? ""}
+          userId={sessionUser.id}
+        />
       </Card>
 
       <Card tone="magenta">

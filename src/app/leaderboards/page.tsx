@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Avatar } from "@/components/avatar";
 import { PlayerLink } from "@/components/player-link";
 import { Card, CardTitle, PageTitle, cx } from "@/components/ui";
 import { EVENT_POINTS } from "@/engine";
@@ -41,6 +42,7 @@ function Podium({ board }: { board: BoardView }) {
           )}
         >
           <p className={cx("font-mono text-xs", i === 0 ? "text-warn" : "text-muted")}>#{r.rank}</p>
+          <Avatar avatar={r.avatar} seed={r.key.replace(/^u:/, "")} size={40} className="mx-auto my-1" />
           <p className="truncate font-bold">
             <PlayerLink name={r.name} profile={r.profile} />
           </p>
@@ -187,6 +189,12 @@ export default async function LeaderboardsPage({ searchParams }: PageProps<"/lea
   return (
     <>
       <PageTitle kicker={live?.season.name ?? "league"}>Leaderboards</PageTitle>
+      <p className="-mt-3 mb-4 text-sm">
+        <Link href="/trophies" className="text-cyan underline">
+          Hall of champions
+        </Link>{" "}
+        · every trophy ever won
+      </p>
       <nav aria-label="Boards" className="mb-4 grid grid-cols-4 gap-2">
         {TABS.map((t) => (
           <Link

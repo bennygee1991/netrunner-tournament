@@ -86,6 +86,8 @@ On **Admin → Players** you can:
    - clears the events, ready for the next season.
 5. Start the next season (step 1).
 
+**Players and trophies.** Everyone can browse **Players** (search, sort by events or trophies) and the **Hall of champions** (from the Boards page): season podiums, event champions and milestone holders. Players pick an avatar on their Account page.
+
 **Reset everything** (on the same page) wipes all seasons, results, past seasons and trophies. Use
 it only to start completely fresh, for example after testing. You have to type `RESET`. Tick the
 box if you also want to delete all player accounts; admin accounts are always kept.

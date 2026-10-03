@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 import { audit, type Actor } from "../audit";
+import { isAvatarKey } from "../avatars";
 import { getDummyHash, hashPassword, verifyPassword } from "../password";
 import { LIMITS, clear, consume, peek, sweepExpired } from "../rate-limit";
 import { passwordProblem, runnerNameKey, runnerNameSchema } from "../validation";
@@ -188,6 +189,11 @@ const profileInput = z.object({
     .transform((v) => v.replace(/[\u0000-\u0009\u000B-\u001F\u007F]/g, "").trim())
     .pipe(z.string().max(BIO_MAX, `Bio must be at most ${BIO_MAX} characters.`))
     .optional(),
+  // "" = automatic default; otherwise one of the preset keys.
+  avatar: z
+    .string()
+    .refine((v) => v === "" || isAvatarKey(v), "Pick one of the avatars.")
+    .optional(),
 });
 
 export async function updateProfile(db: PrismaClient, userId: string, raw: unknown) {
@@ -201,6 +207,7 @@ export async function updateProfile(db: PrismaClient, userId: string, raw: unkno
       prefs,
       email: parsed.data.email,
       ...(parsed.data.bio !== undefined ? { bio: parsed.data.bio || null } : {}),
+      ...(parsed.data.avatar !== undefined ? { avatar: parsed.data.avatar || null } : {}),
     },
   });
   return { ok: true as const };

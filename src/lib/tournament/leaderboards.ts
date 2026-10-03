@@ -17,6 +17,7 @@ export interface BoardView {
     name: string;
     /** Runner name for a profile link (accounts only). */
     profile: string | null;
+    avatar: string | null;
     rank: number;
     total: number;
     titles: number;
@@ -34,8 +35,9 @@ export async function getLiveBoards(db: PrismaClient) {
   const prizes = readPrizes(season.prizesJson);
   const users = await db.user.findMany({
     where: { id: { in: boards.season.map((r) => userIdFromKey(r.id)).filter((x): x is string => !!x) } },
-    select: { id: true, runnerName: true, disabledAt: true },
+    select: { id: true, runnerName: true, avatar: true, disabledAt: true },
   });
+  const avatarOf = new Map(users.map((u) => [`u:${u.id}`, u.avatar]));
   const profileOf = new Map(users.filter((u) => !u.disabledAt).map((u) => [`u:${u.id}`, u.runnerName]));
 
   const build = (key: BoardKey): BoardView => {
@@ -58,6 +60,7 @@ export async function getLiveBoards(db: PrismaClient) {
         key: r.id,
         name: nameOf(r.id),
         profile: profileOf.get(r.id) ?? null,
+        avatar: avatarOf.get(r.id) ?? null,
         rank: r.rank,
         total: r.total,
         titles: r.titles,
