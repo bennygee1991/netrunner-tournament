@@ -62,3 +62,33 @@ test("admin renames, disables and deletes a player", async ({ page }) => {
   await page.goto(`/admin/players?q=${encodeURIComponent(fixed)}`);
   await expect(page.getByText("No players found.")).toBeVisible();
 });
+
+test("admin makes a player an organizer and removes it again", async ({ page }) => {
+  const name = uniqueName("CoOrg");
+  await register(page, name);
+  await logout(page);
+
+  await loginOk(page, E2E_ADMIN.runnerName, E2E_ADMIN.password);
+  await openPlayer(page, name);
+  await page.getByRole("button", { name: "Make organizer" }).click();
+  await page.getByRole("button", { name: "Tap again to confirm" }).click();
+  await expect(page.getByText("Now an organizer.")).toBeVisible();
+  await logout(page);
+
+  await loginOk(page, name);
+  await expect(
+    page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Admin" }),
+  ).toBeVisible();
+  expect((await page.goto("/admin/players"))?.status()).toBe(200);
+  await logout(page);
+
+  await loginOk(page, E2E_ADMIN.runnerName, E2E_ADMIN.password);
+  await openPlayer(page, name);
+  await page.getByRole("button", { name: "Remove organizer access" }).click();
+  await page.getByRole("button", { name: "Tap again to confirm" }).click();
+  await expect(page.getByText("Organizer access removed.")).toBeVisible();
+  await logout(page);
+
+  await loginOk(page, name);
+  expect((await page.goto("/admin/players"))?.status()).toBe(404);
+});

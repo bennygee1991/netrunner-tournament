@@ -37,6 +37,8 @@ const LABELS: Record<string, string> = {
   "player.enable": "Enabled account",
   "player.delete": "Deleted account",
   "player.link_guest": "Linked walk-in results",
+  "player.make_admin": "Made organizer",
+  "player.remove_admin": "Removed organizer",
   "system.backup_download": "Downloaded backup",
 };
 

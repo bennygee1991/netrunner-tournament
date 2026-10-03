@@ -73,6 +73,7 @@ On **Admin → Players** you can:
 - **Rename** a player (to fix typos).
 - **Disable** an account (they can't log in) or **enable** it again.
 - **Delete** an account: type their runner name to confirm. Their past results stay under the name "Deleted player XXXX".
+- **Make organizer** / **Remove organizer access** (tap twice) to share the admin tools with a co-organizer. You cannot change your own role, and there is always at least one organizer.
 
 ## 7. End of season
 

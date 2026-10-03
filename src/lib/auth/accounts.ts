@@ -285,6 +285,35 @@ export async function adminSetDisabled(
   return { ok: true };
 }
 
+/** Makes a player an organizer (admin) or removes admin access. Never your own role. */
+export async function adminSetRole(
+  db: PrismaClient,
+  actor: Actor,
+  userId: unknown,
+  rawRole: unknown,
+): Promise<{ ok: true } | Fail> {
+  const role = z.enum(["PLAYER", "ADMIN"]).safeParse(rawRole);
+  if (!role.success) return { ok: false, error: "Invalid role." };
+  const user = await loadTarget(db, userId);
+  if (!user) return { ok: false, error: "Player not found." };
+  if (user.id === actor.id) return { ok: false, error: "You cannot change your own role." };
+  if (role.data === "ADMIN" && user.disabledAt) return { ok: false, error: "Enable the account first." };
+  if (user.role === role.data) return { ok: true };
+  if (role.data === "PLAYER" && (await db.user.count({ where: { role: "ADMIN" } })) <= 1) {
+    return { ok: false, error: "There must always be at least one organizer." };
+  }
+  await db.$transaction(async (tx) => {
+    await tx.user.update({ where: { id: user.id }, data: { role: role.data } });
+    await audit(tx, actor, role.data === "ADMIN" ? "player.make_admin" : "player.remove_admin", {
+      userId: user.id,
+      runnerName: user.runnerName,
+      before: user.role,
+      after: role.data,
+    });
+  });
+  return { ok: true };
+}
+
 /**
  * Deletes an account after typed confirmation of its runner name. Event results are kept but
  * anonymised: the player's entrant rows become guest rows named "Deleted player XXXX".

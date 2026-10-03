@@ -8,6 +8,7 @@ import {
   adminIssueTempPassword,
   adminRename,
   adminSetDisabled,
+  adminSetRole,
   authenticate,
   changePassword,
   readPrefs,
@@ -261,6 +262,31 @@ describe.skipIf(!hasTestDb)("accounts (database)", () => {
       await adminSetDisabled(db, admin, p.userId, false);
       expect((await authenticate(db, { runnerName: "Rulebreaker", password: GOOD }, ip())).ok).toBe(true);
       expect(await adminSetDisabled(db, admin, admin.id, true)).toMatchObject({ ok: false });
+    });
+
+    it("promotes and demotes organizers, with guards, and the change applies to live sessions", async () => {
+      const admin = await makeAdmin();
+      const p = await registerUser(db, reg("Co Organizer"), ip());
+      if (!p.ok) throw new Error();
+      expect(await adminSetRole(db, admin, p.userId, "ADMIN")).toEqual({ ok: true });
+      expect((await validateSession(db, p.token))?.role).toBe("ADMIN");
+      expect(await adminSetRole(db, admin, admin.id, "PLAYER")).toMatchObject({ ok: false });
+      expect(await adminSetRole(db, admin, p.userId, "OWNER")).toMatchObject({ ok: false });
+      expect(await adminSetRole(db, admin, p.userId, "PLAYER")).toEqual({ ok: true });
+      expect((await validateSession(db, p.token))?.role).toBe("PLAYER");
+      expect(
+        (
+          await db.auditLog.findMany({
+            where: { action: { in: ["player.make_admin", "player.remove_admin"] } },
+          })
+        ).length,
+      ).toBe(2);
+
+      await adminSetDisabled(db, admin, p.userId, true);
+      expect(await adminSetRole(db, admin, p.userId, "ADMIN")).toMatchObject({
+        ok: false,
+        error: "Enable the account first.",
+      });
     });
 
     it("delete needs the typed runner name and anonymises results", async () => {

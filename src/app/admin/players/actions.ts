@@ -2,7 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { adminDelete, adminIssueTempPassword, adminRename, adminSetDisabled } from "@/lib/auth/accounts";
+import {
+  adminDelete,
+  adminIssueTempPassword,
+  adminRename,
+  adminSetDisabled,
+  adminSetRole,
+} from "@/lib/auth/accounts";
 import { adminActor } from "@/lib/auth/admin-action";
 import { db } from "@/lib/db";
 import { type FormState, str } from "@/lib/forms/state";
@@ -56,4 +62,12 @@ export async function linkGuestAction(_prev: FormState, form: FormData): Promise
   revalidatePath("/admin/players");
   revalidatePath("/", "layout");
   return { message: result.message };
+}
+
+export async function setRoleAction(_prev: FormState, form: FormData): Promise<FormState> {
+  const actor = await adminActor();
+  const result = await adminSetRole(db, actor, str(form, "userId"), str(form, "role"));
+  if (!result.ok) return { error: result.error };
+  revalidatePath("/admin/players");
+  return { message: str(form, "role") === "ADMIN" ? "Now an organizer." : "Organizer access removed." };
 }
