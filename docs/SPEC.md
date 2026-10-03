@@ -102,9 +102,10 @@ public, so say "taken"), security headers, admin routes behind role check in mid
   replaces the prototype's per-browser sign-up doc). Visitors see a call to action to register / log in.
 - **Profiles**: `/players/[runnerName]` with event history, leaderboard finishes and trophies; players
   can edit a short bio and display preferences from `/account`.
-- **Trophies**: awarded automatically when a season is archived (season champion, Month 1 and Month 2
-  winners, podium places) and when an event finishes (event champion). Shown on profiles and in Past
-  seasons. Kept when a season is reset; wiped only by "Reset everything".
-- **Email notifications of upcoming events**: opt-in per player, needs a verified email address. Sent
-  when a new season's events are published and as a reminder before each event. Unsubscribe link in
-  every email.
+- **Trophies**, shown on profiles and in Past seasons, kept across season resets, wiped only by
+  "Reset everything":
+  - Season champion, 2nd and 3rd place: awarded when a season is archived.
+  - Event champion: awarded when an event finishes.
+  - Milestones (initial set, owner may change): first event played, 10 events played,
+    undefeated Swiss (finished an event's Swiss with no game lost).
+- **No email**: no notifications and no email password reset. Password resets are admin-only.

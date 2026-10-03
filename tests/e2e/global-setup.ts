@@ -4,7 +4,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../../src/generated/prisma/client";
 import { seedAdmin } from "../../src/lib/seed-admin";
 
-export const E2E_ADMIN = { runnerName: "E2E Admin", password: "quiet-orbit-lantern-7" };
+import { E2E_ADMIN } from "./fixtures";
 
 /** Fresh test database with only the seeded admin. */
 export default async function globalSetup() {

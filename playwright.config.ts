@@ -35,7 +35,10 @@ export default defineConfig({
     env: {
       DATABASE_URL: databaseUrl,
       APP_URL: baseURL,
-      E2E: "1",
+      // High limits so the suite can register/log in many times from one IP.
+      // Lockout behaviour is covered by the Vitest DB tests.
+      RATE_LIMIT_LOGIN_IP: "10000",
+      RATE_LIMIT_REGISTER_IP: "10000",
     },
   },
 });

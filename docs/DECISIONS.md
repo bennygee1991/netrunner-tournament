@@ -5,7 +5,7 @@ Owner-approved decisions (2026-10-03):
 | Topic | Decision |
 | --- | --- |
 | Hosting | Vercel (app) + Neon (Postgres). Owner provisions accounts by following the README; nothing is provisioned by Claude. |
-| Email reset | Not built. Password resets are done by the admin issuing a one-time temporary password. Email field stays optional. |
+| Email | None: no notifications, no email reset (owner: lower cost). Admin issues one-time temporary passwords. Email field stays optional. |
 | Domain | Free `*.vercel.app` address to start; custom domain can be added later. |
 | Backups | Neon point-in-time restore + nightly `pg_dump` GitHub Action (private artifact, 90 days) + admin "download backup" button. |
 | Rate limiting | Postgres-backed fixed-window buckets (`RateLimit` table); no extra service. |

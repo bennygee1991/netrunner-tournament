@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { SiteHeader } from "@/components/site-header";
+import { readPrefs } from "@/lib/auth/accounts";
+import { getCurrentUser } from "@/lib/auth/server";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -16,9 +18,11 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const user = await getCurrentUser();
+  const theme = user ? readPrefs(user.prefs).theme : "system";
   return (
-    <html lang="en" className="h-full antialiased">
+    <html lang="en" className="h-full antialiased" data-theme={theme === "system" ? undefined : theme}>
       <body className="flex min-h-full flex-col">
         <a
           href="#main"
@@ -26,7 +30,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         >
           Skip to content
         </a>
-        <SiteHeader />
+        <SiteHeader user={user} />
         <main id="main" className="mx-auto w-full max-w-3xl flex-1 px-4 py-6">
           {children}
         </main>
