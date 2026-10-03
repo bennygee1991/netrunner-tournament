@@ -45,6 +45,7 @@ pnpm dev                      # http://localhost:3000
 - `src/lib/tournament/`: DB ⇄ engine mapping (`state.ts`), admin operations with version checks and audit (`ops.ts`), registration, seasons, resets, boards, profiles, queries.
 - `src/lib/auth/`: sessions, accounts, rate limits, admin checks.
 - `src/lib/rules-content.ts`: Rules page text built from engine constants (tested).
+- `src/lib/guides.ts` + `src/components/markdown.tsx`: Guides wiki (Markdown via react-markdown, raw HTML never rendered, revisions kept).
 - `src/app/`: pages, server actions and route handlers. Every admin action calls `adminActor()` (origin check + admin role).
 - `prisma/`: schema, migrations, seed. `scripts/`: demo data, restore, password reset.
 

@@ -67,6 +67,7 @@ model User {
   auditLogs    AuditLog[]
   eventRecords EventRecord[]
   trophies     Trophy[]
+  guideEdits   GuideRevision[]
 }
 
 /// Server-side session. The cookie holds a random token; only its SHA-256 hash is stored here.
@@ -286,4 +287,39 @@ model Trophy {
 
   @@index([userId])
   @@index([eventId])
+}
+
+/// A Guides (wiki) page written by organizers in Markdown. Players see published pages.
+model GuidePage {
+  id        String   @id @default(cuid())
+  /// URL part: lowercase letters, digits and dashes.
+  slug      String   @unique
+  title     String
+  body      String
+  /// Lower numbers are listed first.
+  sortOrder Int      @default(100)
+  published Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  revisions GuideRevision[]
+
+  @@index([published, sortOrder])
+}
+
+/// Every saved version of a guide page, newest last, for history and restore.
+model GuideRevision {
+  id         String   @id @default(cuid())
+  pageId     String
+  title      String
+  body       String
+  editorId   String?
+  /// Name at the time, kept if the editor's account is deleted.
+  editorName String
+  createdAt  DateTime @default(now())
+
+  page   GuidePage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  editor User?     @relation(fields: [editorId], references: [id], onDelete: SetNull)
+
+  @@index([pageId, createdAt])
 }
