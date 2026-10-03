@@ -27,6 +27,22 @@ export default async function AdminPlayersPage({ searchParams }: PageProps<"/adm
     },
   });
 
+  const guestNames = [
+    ...new Set([
+      ...(
+        await db.entrant.findMany({
+          where: { userId: null, guestName: { not: null } },
+          select: { guestName: true },
+        })
+      ).map((e) => e.guestName!),
+      ...(await db.eventRecord.findMany({ where: { userId: null }, select: { playerName: true } })).map(
+        (r) => r.playerName,
+      ),
+    ]),
+  ]
+    .filter((n) => !n.startsWith("Deleted player "))
+    .sort((a, b) => a.localeCompare(b));
+
   return (
     <>
       <PageTitle kicker="organizer">Players</PageTitle>
@@ -47,6 +63,24 @@ export default async function AdminPlayersPage({ searchParams }: PageProps<"/adm
       </form>
       {sp.renamed && <FormMessage tone="ok">Renamed.</FormMessage>}
       {players.length === 0 && <p className="text-muted">No players found.</p>}
+      {guestNames.length > 0 && !q && (
+        <Card tone="warn">
+          <h2 className="mb-2 font-mono text-xs tracking-widest text-muted uppercase">
+            Walk-in players (no account)
+          </h2>
+          <ul className="flex flex-wrap gap-2">
+            {guestNames.map((n) => (
+              <li key={n} className="rounded border border-border px-2 py-1 text-sm">
+                {n}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-muted">
+            When a walk-in creates an account, open their account below and use &quot;Link walk-in
+            results&quot;.
+          </p>
+        </Card>
+      )}
       <ul>
         {players.map((p) => (
           <li key={p.id}>

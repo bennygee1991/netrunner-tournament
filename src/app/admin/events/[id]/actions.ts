@@ -1,10 +1,23 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { adminActor } from "@/lib/auth/admin-action";
 import { db } from "@/lib/db";
 import { type FormState, str } from "@/lib/forms/state";
-import { opFinish, opPairNext, opSetResult, opStartCut, opStartSwiss } from "@/lib/tournament/ops";
+import {
+  opDrop,
+  opFinish,
+  opPairNext,
+  opReopen,
+  opResetEvent,
+  opRestartRound,
+  opSetResult,
+  opStartCut,
+  opStartSwiss,
+  opUndoRound,
+  opUndrop,
+} from "@/lib/tournament/ops";
 import {
   addPlayerByName,
   approveAllSignups,
@@ -114,4 +127,48 @@ export async function resultAction(_p: FormState, form: FormData): Promise<FormS
     b: str(form, "b"),
   };
   return finish(eventId, await opSetResult(db, actor, eventId, input, cryptoRng));
+}
+
+// ------------------------------------------------------------------ repair tools
+
+export async function restartRoundAction(_p: FormState, form: FormData): Promise<FormState> {
+  const actor = await adminActor();
+  const eventId = str(form, "eventId");
+  const res = await opRestartRound(db, actor, eventId, str(form, "phase"), cryptoRng, str(form, "version"));
+  return finish(eventId, res, "Round re-paired.");
+}
+
+export async function undoRoundAction(_p: FormState, form: FormData): Promise<FormState> {
+  const actor = await adminActor();
+  const eventId = str(form, "eventId");
+  const res = await opUndoRound(db, actor, eventId, str(form, "phase"), str(form, "version"));
+  return finish(eventId, res, "Round undone.");
+}
+
+export async function reopenAction(_p: FormState, form: FormData): Promise<FormState> {
+  const actor = await adminActor();
+  const eventId = str(form, "eventId");
+  const res = await finish(eventId, await opReopen(db, actor, eventId, str(form, "version")));
+  if (res.error) return res;
+  redirect(`/admin/events/${eventId}?notice=event-reopened`);
+}
+
+export async function resetEventAction(_p: FormState, form: FormData): Promise<FormState> {
+  const actor = await adminActor();
+  const eventId = str(form, "eventId");
+  const res = await finish(eventId, await opResetEvent(db, actor, eventId, str(form, "confirm")));
+  if (res.error) return res;
+  redirect(`/admin/events/${eventId}?notice=event-reset`);
+}
+
+export async function dropAction(_p: FormState, form: FormData): Promise<FormState> {
+  const actor = await adminActor();
+  const eventId = str(form, "eventId");
+  return finish(eventId, await opDrop(db, actor, eventId, str(form, "entrantId")));
+}
+
+export async function undropAction(_p: FormState, form: FormData): Promise<FormState> {
+  const actor = await adminActor();
+  const eventId = str(form, "eventId");
+  return finish(eventId, await opUndrop(db, actor, eventId, str(form, "entrantId")));
 }

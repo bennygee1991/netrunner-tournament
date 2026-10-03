@@ -2,12 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionForm } from "@/components/action-form";
+import { ConfirmSubmit } from "@/components/confirm-submit";
+import { Notice } from "@/components/notice";
 import { SubmitButton } from "@/components/submit-button";
 import { MatchCard } from "@/components/tournament/match-card";
 import { ResultEntry } from "@/components/tournament/result-entry";
 import { ResultsTable } from "@/components/tournament/results-table";
 import { StandingsTable } from "@/components/tournament/standings-table";
 import { EventStatusBadge, formatLine } from "@/components/tournament/status-badge";
+import { TypedConfirmForm } from "@/components/typed-confirm";
 import { Card, CardTitle, Field, PageTitle, buttonStyles } from "@/components/ui";
 import { db } from "@/lib/db";
 import { formatDay, toIsoDate } from "@/lib/tournament/dates";
@@ -16,13 +19,19 @@ import {
   addPlayerAction,
   approveAction,
   approveAllAction,
+  dropAction,
   finishAction,
   pairNextAction,
   rejectAction,
   removeEntrantAction,
+  reopenAction,
+  resetEventAction,
+  restartRoundAction,
   resultAction,
   startCutAction,
   startSwissAction,
+  undoRoundAction,
+  undropAction,
 } from "./actions";
 import { SetupForm } from "./setup-form";
 
@@ -91,7 +100,7 @@ function NextStepCard({ view }: { view: EventView }) {
   );
 }
 
-function Rounds({ view }: { view: EventView }) {
+function Rounds({ view, repair }: { view: EventView; repair: boolean }) {
   const double = view.meta.matchFormat === "DOUBLE";
   const swissLive = view.meta.status === "SWISS";
   const cutLive = view.meta.status === "CUT";
@@ -130,8 +139,25 @@ function Rounds({ view }: { view: EventView }) {
           <CardTitle>
             Swiss · {view.swiss.length} of {view.meta.effectiveSwissRounds} rounds
           </CardTitle>
+          {swissLive && view.swiss.length > 1 && (
+            <p className="mb-3 text-sm">
+              {repair ? (
+                <>
+                  <span className="text-warn">Repair mode is on:</span> earlier rounds are open below. Fixing
+                  a result updates the standings at once; existing pairings stay as they are.{" "}
+                  <Link href={`/admin/events/${view.meta.id}`} className={buttonStyles.link}>
+                    Turn off
+                  </Link>
+                </>
+              ) : (
+                <Link href={`/admin/events/${view.meta.id}?repair=1`} className={buttonStyles.link}>
+                  Repair an earlier round&apos;s results
+                </Link>
+              )}
+            </p>
+          )}
           {[...view.swiss].reverse().map((r) =>
-            swissLive && r.index === lastSwiss ? (
+            swissLive && (r.index === lastSwiss || repair) ? (
               <section key={r.index} className="mb-3">
                 <h3 className="mb-1 font-mono text-sm tracking-widest text-magenta uppercase">
                   {r.label} · {r.complete ? "all reported" : "in progress"}
@@ -171,19 +197,25 @@ function Rounds({ view }: { view: EventView }) {
 
 function Registrations({ view }: { view: EventView }) {
   const { meta } = view;
-  const open = meta.status === "SIGNUP" || meta.status === "SWISS";
-  if (!open) return null;
+  const canAdd = meta.status === "SIGNUP" || meta.status === "SWISS";
+  const canDrop = meta.status === "SWISS" || meta.status === "CUT";
+  if (!canAdd && !canDrop) return null;
   const fields = { eventId: meta.id };
   return (
     <Card>
       <CardTitle>Players</CardTitle>
       {meta.status === "SWISS" && (
-        <p className="mb-3 text-sm text-muted">Players added now join the next pairing with zero points.</p>
+        <p className="mb-3 text-sm text-muted">
+          Late players join the next pairing with zero points (restart the round to include them now). Dropped
+          players are left out of future pairings and the cut but stay in the standings.
+        </p>
       )}
-      <h3 className="mb-2 font-mono text-xs tracking-widest text-muted uppercase">
-        Pending sign-ups ({view.pending.length})
-      </h3>
-      {view.pending.length === 0 ? (
+      {canAdd && (
+        <h3 className="mb-2 font-mono text-xs tracking-widest text-muted uppercase">
+          Pending sign-ups ({view.pending.length})
+        </h3>
+      )}
+      {!canAdd ? null : view.pending.length === 0 ? (
         <p className="mb-4 text-sm text-muted">No pending sign-ups.</p>
       ) : (
         <>
@@ -229,9 +261,29 @@ function Registrations({ view }: { view: EventView }) {
       </h3>
       <ul className="mb-4 flex flex-wrap gap-2">
         {view.entrants.map((e) => (
-          <li key={e.id} className="flex items-center gap-1 rounded border border-cyan px-2 py-1">
-            <span>{e.name}</span>
+          <li
+            key={e.id}
+            className={`flex items-center gap-1 rounded border px-2 py-1 ${e.dropped ? "border-border opacity-70" : "border-cyan"}`}
+          >
+            <span className={e.dropped ? "line-through" : undefined}>{e.name}</span>
             {!e.userId && <span className="font-mono text-[10px] text-muted uppercase">guest</span>}
+            {e.dropped && <span className="font-mono text-[10px] text-danger uppercase">dropped</span>}
+            {canDrop && (
+              <ActionForm
+                action={e.dropped ? undropAction : dropAction}
+                fields={{ ...fields, entrantId: e.id }}
+                showMessage={false}
+              >
+                <button
+                  type="submit"
+                  className={e.dropped ? "px-1 text-cyan" : "px-1 text-danger"}
+                  aria-label={e.dropped ? `Re-add ${e.name}` : `Drop ${e.name}`}
+                  title={e.dropped ? "Re-add" : "Drop"}
+                >
+                  {e.dropped ? "↩" : "✕"}
+                </button>
+              </ActionForm>
+            )}
             {meta.status === "SIGNUP" && (
               <ActionForm
                 action={removeEntrantAction}
@@ -247,26 +299,83 @@ function Registrations({ view }: { view: EventView }) {
         ))}
       </ul>
 
-      <ActionForm action={addPlayerAction} fields={fields}>
-        <Field
-          id="add-player"
-          label="Add player"
-          name="name"
-          autoComplete="off"
-          autoCapitalize="none"
-          placeholder="Runner name or walk-in name"
-          hint="An existing account is added as itself; any other name is added as a walk-in guest."
-        />
-        <SubmitButton variant="secondary" pendingText="Adding…">
-          Add
-        </SubmitButton>
-      </ActionForm>
+      {canAdd && (
+        <ActionForm action={addPlayerAction} fields={fields}>
+          <Field
+            id="add-player"
+            label="Add player"
+            name="name"
+            autoComplete="off"
+            autoCapitalize="none"
+            placeholder="Runner name or walk-in name"
+            hint="An existing account is added as itself; any other name is added as a walk-in guest."
+          />
+          <SubmitButton variant="secondary" pendingText="Adding…">
+            Add
+          </SubmitButton>
+        </ActionForm>
+      )}
     </Card>
   );
 }
 
-export default async function AdminEventPage({ params }: PageProps<"/admin/events/[id]">) {
+function RepairCard({ view }: { view: EventView }) {
+  const { meta } = view;
+  if (meta.status === "SIGNUP") return null;
+  const fields = { eventId: meta.id, version: meta.version };
+  const phase = meta.status === "CUT" ? "cut" : "swiss";
+  const live = meta.status === "SWISS" || meta.status === "CUT";
+  const roundName = phase === "cut" ? (view.cut.at(-1)?.label ?? "cut round") : `round ${view.swiss.length}`;
+  return (
+    <Card tone="danger">
+      <CardTitle>Fix mistakes</CardTitle>
+      {live && (
+        <div className="mb-4 space-y-3">
+          <ActionForm action={restartRoundAction} fields={{ ...fields, phase }}>
+            <p className="mb-2 text-sm text-muted">
+              Restart {roundName}: discard its pairings and results and pair again (includes late players,
+              leaves out drops).
+            </p>
+            <ConfirmSubmit>Restart {roundName}</ConfirmSubmit>
+          </ActionForm>
+          <ActionForm action={undoRoundAction} fields={{ ...fields, phase }}>
+            <p className="mb-2 text-sm text-muted">
+              Undo {roundName}: remove it entirely
+              {phase === "swiss" && view.swiss.length === 1 ? " (back to sign-up)" : ""}
+              {phase === "cut" && view.cut.length === 1 ? " (back to Swiss)" : ""}.
+            </p>
+            <ConfirmSubmit>Undo {roundName}</ConfirmSubmit>
+          </ActionForm>
+        </div>
+      )}
+      {meta.status === "DONE" && (
+        <ActionForm action={reopenAction} fields={fields} className="mb-4">
+          <p className="mb-2 text-sm text-muted">
+            Reopen the event to change results. Its league points are removed until it is finished again.
+          </p>
+          <ConfirmSubmit>Reopen event</ConfirmSubmit>
+        </ActionForm>
+      )}
+      <TypedConfirmForm
+        id="reset-event"
+        action={resetEventAction}
+        phrase={meta.name}
+        fields={{ eventId: meta.id }}
+        label={`Type "${meta.name}" to reset this event`}
+        buttonText="Reset event"
+      >
+        <p className="mb-2 text-sm text-muted">
+          Reset event: delete every round and result and go back to sign-up. Entrants are kept.
+        </p>
+      </TypedConfirmForm>
+    </Card>
+  );
+}
+
+export default async function AdminEventPage({ params, searchParams }: PageProps<"/admin/events/[id]">) {
   const { id } = await params;
+  const sp = await searchParams;
+  const repair = sp.repair === "1";
   const view = await getEventView(db, id);
   if (!view) notFound();
   const { meta } = view;
@@ -285,8 +394,9 @@ export default async function AdminEventPage({ params }: PageProps<"/admin/event
         </Link>
       </div>
 
+      <Notice code={sp.notice} />
       <NextStepCard view={view} />
-      <Rounds view={view} />
+      <Rounds view={view} repair={repair} />
 
       {view.results && (
         <Card tone="warn">
@@ -309,6 +419,7 @@ export default async function AdminEventPage({ params }: PageProps<"/admin/event
       )}
 
       <Registrations view={view} />
+      <RepairCard view={view} />
 
       <Card>
         <CardTitle>Event setup</CardTitle>

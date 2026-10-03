@@ -216,3 +216,69 @@ export async function rejectSignup(
   });
   return { ok: true };
 }
+
+/**
+ * Links a walk-in guest's results to an account: every guest entrant with that name (in events
+ * where the account is not already entered), plus permanent records and trophies under that name.
+ */
+export async function linkGuestToAccount(
+  db: PrismaClient,
+  actor: Actor,
+  rawGuestName: unknown,
+  userId: unknown,
+): Promise<Result> {
+  const name = runnerNameSchema.safeParse(rawGuestName);
+  const uid = idSchema.safeParse(userId);
+  if (!name.success || !uid.success)
+    return { ok: false, error: "Enter the walk-in name exactly as it was entered." };
+  const user = await db.user.findUnique({ where: { id: uid.data } });
+  if (!user) return { ok: false, error: "Player not found." };
+  const key = runnerNameKey(name.data);
+  const guests = (await db.entrant.findMany({ where: { userId: null, guestName: { not: null } } })).filter(
+    (e) => runnerNameKey(e.guestName!) === key,
+  );
+  const records = (await db.eventRecord.findMany({ where: { userId: null } })).filter(
+    (r) => runnerNameKey(r.playerName) === key,
+  );
+  if (!guests.length && !records.length)
+    return { ok: false, error: `No walk-in results found for "${name.data}".` };
+
+  const alreadyIn = new Set(
+    (await db.entrant.findMany({ where: { userId: user.id }, select: { eventId: true } })).map(
+      (e) => e.eventId,
+    ),
+  );
+  const linkable = guests.filter((g) => !alreadyIn.has(g.eventId));
+  const skipped = guests.length - linkable.length;
+
+  await db.$transaction(async (tx) => {
+    for (const g of linkable) {
+      await tx.entrant.update({ where: { id: g.id }, data: { userId: user.id, guestName: null } });
+      await tx.event.update({ where: { id: g.eventId }, data: { version: { increment: 1 } } });
+    }
+    await tx.eventRecord.updateMany({
+      where: { id: { in: records.map((r) => r.id) } },
+      data: { userId: user.id, playerName: user.runnerName },
+    });
+    const trophies = (await tx.trophy.findMany({ where: { userId: null } })).filter(
+      (t) => runnerNameKey(t.playerName) === key,
+    );
+    await tx.trophy.updateMany({
+      where: { id: { in: trophies.map((t) => t.id) } },
+      data: { userId: user.id, playerName: user.runnerName },
+    });
+    await audit(tx, actor, "player.link_guest", {
+      guestName: name.data,
+      userId: user.id,
+      runnerName: user.runnerName,
+      entrantsLinked: linkable.length,
+      recordsLinked: records.length,
+      skippedSameEvent: skipped,
+    });
+  });
+  const parts = [
+    `Linked ${linkable.length} event entr${linkable.length === 1 ? "y" : "ies"} and ${records.length} result record${records.length === 1 ? "" : "s"} to ${user.runnerName}.`,
+  ];
+  if (skipped) parts.push(`${skipped} skipped because ${user.runnerName} was already entered in that event.`);
+  return { ok: true, message: parts.join(" ") };
+}

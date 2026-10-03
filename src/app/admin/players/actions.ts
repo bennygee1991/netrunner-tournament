@@ -6,6 +6,7 @@ import { adminDelete, adminIssueTempPassword, adminRename, adminSetDisabled } fr
 import { adminActor } from "@/lib/auth/admin-action";
 import { db } from "@/lib/db";
 import { type FormState, str } from "@/lib/forms/state";
+import { linkGuestToAccount } from "@/lib/tournament/registration";
 
 export type TempPasswordState = FormState & { tempPassword?: string };
 
@@ -46,4 +47,13 @@ export async function deleteAction(_prev: FormState, form: FormData): Promise<Fo
   if (!result.ok) return { error: result.error };
   revalidatePath("/admin/players");
   return { message: "Account deleted. Their results are kept under an anonymous name." };
+}
+
+export async function linkGuestAction(_prev: FormState, form: FormData): Promise<FormState> {
+  const actor = await adminActor();
+  const result = await linkGuestToAccount(db, actor, str(form, "guestName"), str(form, "userId"));
+  if (!result.ok) return { error: result.error, values: { guestName: str(form, "guestName") } };
+  revalidatePath("/admin/players");
+  revalidatePath("/", "layout");
+  return { message: result.message };
 }

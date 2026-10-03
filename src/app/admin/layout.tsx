@@ -5,6 +5,7 @@ const ADMIN_NAV = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/season", label: "Season" },
   { href: "/admin/players", label: "Players" },
+  { href: "/admin/audit", label: "Audit" },
 ] as const;
 
 /** Every admin page is behind this server-side role check (plus a check in each action). */

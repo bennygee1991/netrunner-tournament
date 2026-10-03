@@ -1,9 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { adminActor } from "@/lib/auth/admin-action";
 import { db } from "@/lib/db";
 import { type FormState, str } from "@/lib/forms/state";
+import { archiveSeason, resetEverything } from "@/lib/tournament/resets";
 import { createSeason, updatePrizes } from "@/lib/tournament/season";
 
 export async function createSeasonAction(_prev: FormState, form: FormData): Promise<FormState> {
@@ -25,4 +27,21 @@ export async function updatePrizesAction(_prev: FormState, form: FormData): Prom
   if (!result.ok) return { error: result.error };
   revalidatePath("/", "layout");
   return { message: "Prizes saved." };
+}
+
+export async function archiveSeasonAction(_prev: FormState, form: FormData): Promise<FormState> {
+  const actor = await adminActor();
+  const result = await archiveSeason(db, actor, str(form, "seasonId"), str(form, "confirm"));
+  if (!result.ok) return { error: result.error };
+  revalidatePath("/", "layout");
+  redirect("/admin/season?notice=season-archived");
+}
+
+export async function resetAllAction(_prev: FormState, form: FormData): Promise<FormState> {
+  const actor = await adminActor();
+  const deleteAccounts = form.get("deleteAccounts") === "on";
+  const result = await resetEverything(db, actor, str(form, "confirm"), deleteAccounts);
+  if (!result.ok) return { error: result.error };
+  revalidatePath("/", "layout");
+  redirect(`/admin/season?notice=${deleteAccounts ? "reset-all-accounts" : "reset-all"}`);
 }

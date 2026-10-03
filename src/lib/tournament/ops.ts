@@ -2,11 +2,17 @@ import { z } from "zod";
 import {
   EngineError,
   type EventState,
+  dropEntrant,
   finishEvent,
   pairNextRound,
+  reopenEvent,
+  resetEvent,
+  restartRound,
   setResult,
   startCut,
   startSwiss,
+  undoRound,
+  undropEntrant,
   type Rng,
 } from "@/engine";
 import type { Prisma, PrismaClient } from "@/generated/prisma/client";
@@ -143,4 +149,97 @@ export function opSetResult(db: PrismaClient, actor: Actor, eventId: unknown, ra
       };
     },
   );
+}
+
+// ------------------------------------------------------------------ repair tools (M5)
+
+const phaseSchema = z.enum(["swiss", "cut"]);
+
+/** Discard the current round's pairings and results and pair again (includes late adds, excludes drops). */
+export function opRestartRound(
+  db: PrismaClient,
+  actor: Actor,
+  eventId: unknown,
+  phase: unknown,
+  rng: Rng,
+  version?: unknown,
+) {
+  const p = phaseSchema.safeParse(phase);
+  if (!p.success) return Promise.resolve({ ok: false as const, error: "Invalid phase." });
+  return runEventOp(
+    db,
+    actor,
+    eventId,
+    "event.restart_round",
+    (l) => restartRound(l.state, p.data, l.nameOf, rng),
+    (l) => ({ phase: p.data, round: p.data === "swiss" ? l.state.rounds.length : l.state.cut.length }),
+    version,
+  );
+}
+
+export function opUndoRound(
+  db: PrismaClient,
+  actor: Actor,
+  eventId: unknown,
+  phase: unknown,
+  version?: unknown,
+) {
+  const p = phaseSchema.safeParse(phase);
+  if (!p.success) return Promise.resolve({ ok: false as const, error: "Invalid phase." });
+  return runEventOp(
+    db,
+    actor,
+    eventId,
+    "event.undo_round",
+    (l) => undoRound(l.state, p.data),
+    (l) => ({ phase: p.data, round: p.data === "swiss" ? l.state.rounds.length : l.state.cut.length }),
+    version,
+  );
+}
+
+export function opReopen(db: PrismaClient, actor: Actor, eventId: unknown, version?: unknown) {
+  return runEventOp(db, actor, eventId, "event.reopen", (l) => reopenEvent(l.state), undefined, version);
+}
+
+/** Reset a single event back to sign-up (keeps entrants). Requires typing the event name. */
+export function opResetEvent(db: PrismaClient, actor: Actor, eventId: unknown, confirmation: unknown) {
+  return runEventOp(db, actor, eventId, "event.reset", (l) => {
+    if (typeof confirmation !== "string" || confirmation.trim() !== l.event.name) {
+      throw new ServiceError(`Type the event name "${l.event.name}" exactly to confirm.`);
+    }
+    return resetEvent(l.state);
+  });
+}
+
+function entrantOp(
+  db: PrismaClient,
+  actor: Actor,
+  eventId: unknown,
+  entrantId: unknown,
+  action: string,
+  fn: (state: EventState, id: string) => EventState,
+) {
+  const eid = z.string().min(1).max(64).safeParse(entrantId);
+  if (!eid.success) return Promise.resolve({ ok: false as const, error: "Entrant not found." });
+  return runEventOp(
+    db,
+    actor,
+    eventId,
+    action,
+    (l) => {
+      if (l.state.status === "done") throw new ServiceError("This event is finished. Reopen it first.");
+      if (!l.state.entrants.includes(eid.data)) throw new ServiceError("Entrant not found.");
+      return fn(l.state, eid.data);
+    },
+    (l) => ({ player: l.nameOf(eid.data) }),
+  );
+}
+
+/** Drop: excluded from future pairings and the cut, kept in standings. */
+export function opDrop(db: PrismaClient, actor: Actor, eventId: unknown, entrantId: unknown) {
+  return entrantOp(db, actor, eventId, entrantId, "event.drop", dropEntrant);
+}
+
+export function opUndrop(db: PrismaClient, actor: Actor, eventId: unknown, entrantId: unknown) {
+  return entrantOp(db, actor, eventId, entrantId, "event.undrop", undropEntrant);
 }

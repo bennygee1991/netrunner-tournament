@@ -8,6 +8,7 @@ import {
   type TempPasswordState,
   deleteAction,
   issueTempPasswordAction,
+  linkGuestAction,
   renameAction,
   setDisabledAction,
 } from "./actions";
@@ -19,6 +20,7 @@ export function PlayerActions({ player }: { player: Player }) {
   const [rename, renameFormAction] = useActionState(renameAction, initialFormState);
   const [toggle, toggleAction] = useActionState(setDisabledAction, initialFormState);
   const [del, delAction] = useActionState(deleteAction, initialFormState);
+  const [link, linkAction] = useActionState(linkGuestAction, initialFormState);
 
   return (
     <div className="mt-3 space-y-5 border-t border-border pt-3">
@@ -53,6 +55,25 @@ export function PlayerActions({ player }: { player: Player }) {
         />
         <SubmitButton variant="secondary" pendingText="Saving…">
           Save name
+        </SubmitButton>
+      </form>
+
+      <form action={linkAction}>
+        <input type="hidden" name="userId" value={player.id} />
+        {link.error && <FormMessage tone="error">{link.error}</FormMessage>}
+        {link.message && <FormMessage tone="ok">{link.message}</FormMessage>}
+        <Field
+          label="Link walk-in results to this account"
+          name="guestName"
+          id={`link-${player.id}`}
+          defaultValue={link.values?.guestName}
+          autoComplete="off"
+          autoCapitalize="none"
+          placeholder="Walk-in name, e.g. Kate M"
+          hint="Moves every result entered under that walk-in name onto this account."
+        />
+        <SubmitButton variant="secondary" pendingText="Linking…">
+          Link results
         </SubmitButton>
       </form>
 
