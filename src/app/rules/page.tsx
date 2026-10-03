@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Card, CardTitle, PageTitle } from "@/components/ui";
 import { NSG_POLICIES_URL, rulesContent } from "@/lib/rules-content";
 
@@ -37,6 +38,13 @@ export default function RulesPage() {
           ))}
         </Card>
       ))}
+      <p className="mb-3 text-sm">
+        New to the game, or looking for venue info and house rules? See the{" "}
+        <Link href="/guides" className="text-cyan underline">
+          Guides
+        </Link>
+        .
+      </p>
       <p className="text-xs text-muted">
         Based on the Null Signal Games Organized Play Policies v1.6.2 and the original FFG Android: Netrunner
         tournament rules.{" "}

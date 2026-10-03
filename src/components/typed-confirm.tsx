@@ -34,6 +34,11 @@ export function TypedConfirmForm({
         <input key={k} type="hidden" name={k} value={v} />
       ))}
       {state.error && <FormMessage tone="error">{state.error}</FormMessage>}
+      {Object.values(state.fieldErrors ?? {}).map((msg) => (
+        <FormMessage key={msg} tone="error">
+          {msg}
+        </FormMessage>
+      ))}
       {state.message && <FormMessage tone="ok">{state.message}</FormMessage>}
       {children}
       <div className="mb-4 flex flex-col gap-1">

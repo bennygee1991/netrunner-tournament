@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { ConfirmSubmit } from "@/components/confirm-submit";
 import { SubmitButton } from "@/components/submit-button";
 import { Field, FormMessage } from "@/components/ui";
 import { initialFormState } from "@/lib/forms/state";
@@ -11,14 +12,16 @@ import {
   linkGuestAction,
   renameAction,
   setDisabledAction,
+  setRoleAction,
 } from "./actions";
 
-type Player = { id: string; runnerName: string; disabled: boolean; isSelf: boolean };
+type Player = { id: string; runnerName: string; disabled: boolean; isSelf: boolean; isAdmin: boolean };
 
 export function PlayerActions({ player }: { player: Player }) {
   const [temp, tempAction] = useActionState(issueTempPasswordAction, {} as TempPasswordState);
   const [rename, renameFormAction] = useActionState(renameAction, initialFormState);
   const [toggle, toggleAction] = useActionState(setDisabledAction, initialFormState);
+  const [role, roleAction] = useActionState(setRoleAction, initialFormState);
   const [del, delAction] = useActionState(deleteAction, initialFormState);
   const [link, linkAction] = useActionState(linkGuestAction, initialFormState);
 
@@ -76,6 +79,23 @@ export function PlayerActions({ player }: { player: Player }) {
           Link results
         </SubmitButton>
       </form>
+
+      {!player.isSelf && (
+        <form action={roleAction}>
+          <input type="hidden" name="userId" value={player.id} />
+          <input type="hidden" name="role" value={player.isAdmin ? "PLAYER" : "ADMIN"} />
+          {role.error && <FormMessage tone="error">{role.error}</FormMessage>}
+          {role.message && <FormMessage tone="ok">{role.message}</FormMessage>}
+          <p className="mb-2 text-sm text-muted">
+            {player.isAdmin
+              ? "This player is an organizer and can use every admin tool."
+              : "Organizers can run events, manage players and reset data."}
+          </p>
+          <ConfirmSubmit variant={player.isAdmin ? "danger" : "secondary"}>
+            {player.isAdmin ? "Remove organizer access" : "Make organizer"}
+          </ConfirmSubmit>
+        </form>
+      )}
 
       {!player.isSelf && (
         <form action={toggleAction}>

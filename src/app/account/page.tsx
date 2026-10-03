@@ -6,6 +6,7 @@ import { requireUser } from "@/lib/auth/server";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/format";
 import { formatDay } from "@/lib/tournament/dates";
+import { DeleteAccountForm } from "./delete-account";
 import { ProfileForm } from "./profile-form";
 
 export const metadata: Metadata = { title: "Account" };
@@ -102,6 +103,20 @@ export default async function AccountPage({ searchParams }: PageProps<"/account"
         <Link href="/account/password" className={buttonStyles.secondary}>
           Change password
         </Link>
+      </Card>
+
+      <Card tone="danger">
+        <CardTitle>Your data</CardTitle>
+        <p className="mb-3 text-sm text-muted">
+          Download a copy of everything the league stores about you: account details, sign-ups, results and
+          trophies.
+        </p>
+        <form method="post" action="/account/data" className="mb-6">
+          <button type="submit" className={buttonStyles.secondary}>
+            Download my data
+          </button>
+        </form>
+        <DeleteAccountForm runnerName={user.runnerName} />
       </Card>
     </>
   );

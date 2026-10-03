@@ -73,6 +73,7 @@ On **Admin → Players** you can:
 - **Rename** a player (to fix typos).
 - **Disable** an account (they can't log in) or **enable** it again.
 - **Delete** an account: type their runner name to confirm. Their past results stay under the name "Deleted player XXXX".
+- **Make organizer** / **Remove organizer access** (tap twice) to share the admin tools with a co-organizer. You cannot change your own role, and there is always at least one organizer.
 
 ## 7. End of season
 
@@ -88,6 +89,20 @@ On **Admin → Players** you can:
 **Reset everything** (on the same page) wipes all seasons, results, past seasons and trophies. Use
 it only to start completely fresh, for example after testing. You have to type `RESET`. Tick the
 box if you also want to delete all player accounts; admin accounts are always kept.
+
+## 8. Guides (the wiki)
+
+**Admin → Guides** holds pages players can read under **Guides** in the menu: how to play, house
+rules, venue info, an FAQ, or anything else.
+
+- **Add starter pages** creates four drafts (How to play, League and tournament rules, Venue, FAQ). They contain headings and links to the official rules; fill them in with your own words.
+- Pages are written with simple formatting: `## Heading`, `**bold**`, `- list`, `[link](https://…)`, `> note`.
+- Tick **Published** to show a page; untick it to hide it again.
+- Every save is kept under **History**. **Restore** brings back an earlier version (tap twice).
+- **Delete page**: type the page title to confirm.
+
+Keep explanations of game rules in line with the official Null Signal Games rules. Link to them
+rather than paraphrasing when you're unsure.
 
 ## Trophies players can earn
 

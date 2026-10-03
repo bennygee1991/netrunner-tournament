@@ -1,3 +1,4 @@
+import { eventWhen } from "@/components/tournament/event-when";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -13,7 +14,7 @@ import { EventStatusBadge, formatLine } from "@/components/tournament/status-bad
 import { TypedConfirmForm } from "@/components/typed-confirm";
 import { Card, CardTitle, Field, PageTitle, buttonStyles } from "@/components/ui";
 import { db } from "@/lib/db";
-import { formatDay, toIsoDate } from "@/lib/tournament/dates";
+import { toIsoDate } from "@/lib/tournament/dates";
 import { type EventView, getEventView } from "@/lib/tournament/queries";
 import {
   addPlayerAction,
@@ -386,7 +387,7 @@ export default async function AdminEventPage({ params, searchParams }: PageProps
       <PageTitle kicker={`${meta.seasonName} · run event`}>{meta.name}</PageTitle>
       <div className="mb-4 flex flex-wrap items-center gap-3 font-mono text-sm text-muted">
         <EventStatusBadge status={meta.status} round={view.swiss.length} />
-        <span>{formatDay(meta.date)}</span>
+        <span>{eventWhen(meta)}</span>
         <span>Month {meta.month}</span>
         <span>{formatLine(meta.matchFormat, meta.cutSize)}</span>
         <Link href={`/events/${meta.id}`} className={buttonStyles.link}>
@@ -432,6 +433,9 @@ export default async function AdminEventPage({ params, searchParams }: PageProps
             matchFormat: meta.matchFormat,
             swissRounds: meta.swissRounds,
             cutSize: meta.cutSize,
+            startTime: meta.startTime ?? "",
+            venue: meta.venue ?? "",
+            notes: meta.notes ?? "",
           }}
           locked={meta.status !== "SIGNUP"}
           autoRounds={meta.effectiveSwissRounds}

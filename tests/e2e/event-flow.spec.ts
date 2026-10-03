@@ -81,6 +81,9 @@ test("admin approves sign-ups, adds walk-ins and sets up the event", async ({ pa
   await expect(page.getByText("Entrants (5)")).toBeVisible();
 
   await page.getByLabel("Event name").fill("Kickoff Clash");
+  await page.getByLabel("Start time (optional)").fill("18:30");
+  await page.getByLabel("Venue (optional)").fill("The Hive Game Store");
+  await page.getByLabel("Notes for players (optional)").fill("Bring sleeves. Entry is free.");
   await page.getByLabel("Swiss rounds").fill("2");
   await page.getByLabel("Top cut").selectOption("4");
   await page.getByRole("button", { name: "Save event" }).click();
@@ -115,6 +118,8 @@ test("admin runs Swiss and the cut to a champion", async ({ page }) => {
 test("the public event page shows results, bracket and standings", async ({ page }) => {
   await page.goto(eventUrl);
   await expect(page.getByRole("heading", { name: "Kickoff Clash" })).toBeVisible();
+  await expect(page.getByText(/18:30 · The Hive Game Store/)).toBeVisible();
+  await expect(page.getByText("Bring sleeves. Entry is free.")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Final results" })).toBeVisible();
   await expect(page.getByRole("cell", { name: "Champion" })).toBeVisible();
   await expect(page.getByRole("cell", { name: "+10" })).toBeVisible();

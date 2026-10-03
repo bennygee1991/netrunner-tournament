@@ -19,6 +19,8 @@ const TABLES = [
   "leaderboardSnapshot",
   "eventRecord",
   "trophy",
+  "guidePage",
+  "guideRevision",
   "auditLog",
 ] as const;
 type Table = (typeof TABLES)[number];

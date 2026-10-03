@@ -1,4 +1,6 @@
+import { eventWhen } from "@/components/tournament/event-when";
 import Link from "next/link";
+import { Notice } from "@/components/notice";
 import { SignupButton } from "@/components/tournament/signup-button";
 import { EventStatusBadge, formatLine } from "@/components/tournament/status-badge";
 import { Card, CardTitle, buttonStyles } from "@/components/ui";
@@ -7,12 +9,14 @@ import { db } from "@/lib/db";
 import { formatDay } from "@/lib/tournament/dates";
 import { getHomeData } from "@/lib/tournament/queries";
 
-export default async function HomePage() {
+export default async function HomePage({ searchParams }: PageProps<"/">) {
+  const { notice } = await searchParams;
   const user = await getCurrentUser();
   const home = await getHomeData(db, user?.id ?? null);
 
   return (
     <>
+      <Notice code={notice} />
       <section className="mb-6 space-y-2">
         <p className="font-mono text-xs tracking-widest text-magenta uppercase">&gt; jack in</p>
         <h1 className="text-3xl font-bold tracking-wide uppercase">
@@ -50,7 +54,7 @@ export default async function HomePage() {
                   {home.next.name}
                 </Link>
               </h2>
-              <p className="mb-2 font-mono text-sm">{formatDay(home.next.date)}</p>
+              <p className="mb-2 font-mono text-sm">{eventWhen(home.next)}</p>
               <p className="font-mono text-xs text-muted">
                 {formatLine(home.next.matchFormat, home.next.cutSize)}
               </p>
@@ -100,7 +104,7 @@ export default async function HomePage() {
                       <Link href={`/events/${e.id}`} className="text-lg font-semibold hover:text-cyan">
                         {e.name}
                       </Link>
-                      <span className="font-mono text-sm text-muted">{formatDay(e.date)}</span>
+                      <span className="font-mono text-sm text-muted">{eventWhen(e)}</span>
                     </div>
                     <SignupButton eventId={e.id} eventName={e.name} signedUp={e.mine} />
                   </li>

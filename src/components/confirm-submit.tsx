@@ -8,7 +8,15 @@ import { buttonStyles, cx } from "./ui";
  * Submit button that needs two taps: the first arms it ("Tap again to confirm"), the second submits.
  * Disarms itself after 4 seconds. For undoable-but-disruptive actions (undo/restart round).
  */
-export function ConfirmSubmit({ children, className }: { children: ReactNode; className?: string }) {
+export function ConfirmSubmit({
+  children,
+  className,
+  variant = "danger",
+}: {
+  children: ReactNode;
+  className?: string;
+  variant?: "danger" | "secondary";
+}) {
   const [armed, setArmed] = useState(false);
   const { pending } = useFormStatus();
   useEffect(() => {
@@ -28,7 +36,7 @@ export function ConfirmSubmit({ children, className }: { children: ReactNode; cl
           setArmed(false);
         }
       }}
-      className={cx(buttonStyles.danger, armed && "bg-danger text-accent-fg", className)}
+      className={cx(buttonStyles[variant], armed && "border-danger bg-danger text-accent-fg", className)}
     >
       {pending ? "Working…" : armed ? "Tap again to confirm" : children}
     </button>

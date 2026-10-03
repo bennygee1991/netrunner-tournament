@@ -1,9 +1,9 @@
+import { eventWhen } from "@/components/tournament/event-when";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EventStatusBadge, formatLine } from "@/components/tournament/status-badge";
 import { Card, PageTitle } from "@/components/ui";
 import { db } from "@/lib/db";
-import { formatDay } from "@/lib/tournament/dates";
 import { getActiveSeason, pickNextEvent } from "@/lib/tournament/queries";
 
 export const metadata: Metadata = { title: "Events" };
@@ -32,7 +32,7 @@ export default async function EventsPage() {
                 <div className="min-w-0 flex-1">
                   <h2 className="text-xl font-bold">{e.name}</h2>
                   <p className="font-mono text-xs text-muted">
-                    {formatDay(e.date)} · Month {e.month} ·{" "}
+                    {eventWhen(e)} · Month {e.month} ·{" "}
                     {e.status === "SIGNUP" ? `${e._count.signups} signed up` : `${e._count.entrants} players`}
                   </p>
                   <p className="font-mono text-xs text-muted">{formatLine(e.matchFormat, e.cutSize)}</p>

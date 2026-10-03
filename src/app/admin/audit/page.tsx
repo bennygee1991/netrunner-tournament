@@ -37,7 +37,14 @@ const LABELS: Record<string, string> = {
   "player.enable": "Enabled account",
   "player.delete": "Deleted account",
   "player.link_guest": "Linked walk-in results",
+  "player.make_admin": "Made organizer",
+  "player.self_delete": "Player deleted own account",
+  "player.remove_admin": "Removed organizer",
   "system.backup_download": "Downloaded backup",
+  "guide.create": "Created guide page",
+  "guide.update": "Edited guide page",
+  "guide.restore": "Restored guide version",
+  "guide.delete": "Deleted guide page",
 };
 
 /** Compact one-line summary of the detail JSON (before/after first). */

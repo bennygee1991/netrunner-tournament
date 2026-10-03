@@ -102,6 +102,7 @@ export default async function AdminPlayersPage({ searchParams }: PageProps<"/adm
                     runnerName: p.runnerName,
                     disabled: !!p.disabledAt,
                     isSelf: p.id === admin.id,
+                    isAdmin: p.role === "ADMIN",
                   }}
                 />
               </details>

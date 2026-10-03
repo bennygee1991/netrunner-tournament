@@ -1,3 +1,4 @@
+import { eventWhen } from "@/components/tournament/event-when";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -10,7 +11,6 @@ import { EventStatusBadge, formatLine } from "@/components/tournament/status-bad
 import { Card, CardTitle, PageTitle, buttonStyles } from "@/components/ui";
 import { getCurrentUser } from "@/lib/auth/server";
 import { db } from "@/lib/db";
-import { formatDay } from "@/lib/tournament/dates";
 import { getEventView } from "@/lib/tournament/queries";
 
 export async function generateMetadata({ params }: PageProps<"/events/[id]">): Promise<Metadata> {
@@ -36,7 +36,7 @@ export default async function EventPage({ params }: PageProps<"/events/[id]">) {
       <PageTitle kicker={meta.seasonName}>{meta.name}</PageTitle>
       <div className="mb-4 flex flex-wrap items-center gap-3 font-mono text-sm text-muted">
         <EventStatusBadge status={meta.status} round={view.swiss.length} />
-        <span>{formatDay(meta.date)}</span>
+        <span>{eventWhen(meta)}</span>
         <span>Month {meta.month}</span>
         {user?.role === "ADMIN" && (
           <Link href={`/admin/events/${meta.id}`} className={buttonStyles.link}>
@@ -49,6 +49,13 @@ export default async function EventPage({ params }: PageProps<"/events/[id]">) {
         {meta.cutSize === 8 &&
           " · single elimination (house rule; official top 8 cuts are double elimination)"}
       </p>
+
+      {meta.notes && (
+        <Card>
+          <CardTitle>Event info</CardTitle>
+          <p className="whitespace-pre-line">{meta.notes}</p>
+        </Card>
+      )}
 
       {meta.status === "SIGNUP" && (
         <Card tone="magenta">
