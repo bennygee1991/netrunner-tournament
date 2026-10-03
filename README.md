@@ -3,7 +3,7 @@
 League and tournament site for Netrunner: player accounts (username = runner name), event sign-up,
 Swiss + top-cut events, two monthly leaderboards plus a season board, prizing and full resets.
 
-> Status: under construction (milestone 5 of 7: accounts, engine, events and admin repair tools done). A full organizer guide for deploying and backing up
+> Status: under construction (milestone 6 of 7: everything except deployment polish done). A full organizer guide for deploying and backing up
 > the site arrives in milestone 7.
 
 ## Developer quick start

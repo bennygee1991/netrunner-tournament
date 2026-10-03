@@ -1,11 +1,15 @@
+import { PlayerLink } from "@/components/player-link";
 import type { EventResult } from "@/engine";
 
 export function ResultsTable({
   results,
   nameOf,
+  profileOf = () => null,
 }: {
   results: Map<string, EventResult>;
   nameOf: (id: string) => string;
+  /** Runner name to link to, for account holders. */
+  profileOf?: (id: string) => string | null;
 }) {
   const rows = [...results].sort((a, b) => b[1].points - a[1].points || a[1].rank - b[1].rank);
   return (
@@ -28,7 +32,9 @@ export function ResultsTable({
         <tbody>
           {rows.map(([id, r]) => (
             <tr key={id} className="border-b border-border">
-              <td className="p-2 font-sans text-base font-semibold">{nameOf(id)}</td>
+              <td className="p-2 font-sans text-base font-semibold">
+                <PlayerLink name={nameOf(id)} profile={profileOf(id)} />
+              </td>
               <td className={r.label === "Champion" ? "p-2 text-warn" : "p-2"}>{r.label}</td>
               <td className="p-2 text-right font-bold text-cyan">+{r.points}</td>
             </tr>

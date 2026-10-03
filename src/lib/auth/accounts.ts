@@ -177,14 +177,32 @@ export function readPrefs(value: unknown): Prefs {
   return parsed.success ? parsed.data : { theme: "system" };
 }
 
-const profileInput = z.object({ theme: z.enum(["system", "dark", "light"]), email: optionalEmail });
+export const BIO_MAX = 280;
+
+const profileInput = z.object({
+  theme: z.enum(["system", "dark", "light"]),
+  email: optionalEmail,
+  bio: z
+    .string()
+    // Drop control characters except newlines; keep it short.
+    .transform((v) => v.replace(/[\u0000-\u0009\u000B-\u001F\u007F]/g, "").trim())
+    .pipe(z.string().max(BIO_MAX, `Bio must be at most ${BIO_MAX} characters.`))
+    .optional(),
+});
 
 export async function updateProfile(db: PrismaClient, userId: string, raw: unknown) {
   const parsed = profileInput.safeParse(raw);
   if (!parsed.success) return { ok: false as const, fieldErrors: firstErrors(parsed.error) };
   const user = await db.user.findUniqueOrThrow({ where: { id: userId }, select: { prefs: true } });
   const prefs = { ...readPrefs(user.prefs), theme: parsed.data.theme };
-  await db.user.update({ where: { id: userId }, data: { prefs, email: parsed.data.email } });
+  await db.user.update({
+    where: { id: userId },
+    data: {
+      prefs,
+      email: parsed.data.email,
+      ...(parsed.data.bio !== undefined ? { bio: parsed.data.bio || null } : {}),
+    },
+  });
   return { ok: true as const };
 }
 

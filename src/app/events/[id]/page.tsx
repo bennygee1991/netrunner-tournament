@@ -26,6 +26,8 @@ export default async function EventPage({ params }: PageProps<"/events/[id]">) {
   const { meta } = view;
   const double = meta.matchFormat === "DOUBLE";
   const live = meta.status === "SWISS" || meta.status === "CUT";
+  const profiles = new Map(view.entrants.map((e) => [e.id, e.userId ? e.name : null]));
+  const profileOf = (id: string) => profiles.get(id) ?? null;
   const signedUp = user ? (await db.signup.count({ where: { eventId: id, userId: user.id } })) > 0 : false;
 
   return (
@@ -85,7 +87,7 @@ export default async function EventPage({ params }: PageProps<"/events/[id]">) {
       {view.results && (
         <Card tone="warn">
           <CardTitle>Final results</CardTitle>
-          <ResultsTable results={view.results} nameOf={view.loaded.nameOf} />
+          <ResultsTable results={view.results} nameOf={view.loaded.nameOf} profileOf={profileOf} />
         </Card>
       )}
 
@@ -132,6 +134,7 @@ export default async function EventPage({ params }: PageProps<"/events/[id]">) {
           <StandingsTable
             standings={view.standings}
             nameOf={view.loaded.nameOf}
+            profileOf={profileOf}
             cutSize={
               meta.status === "SWISS" || meta.status === "CUT" || meta.status === "DONE" ? meta.cutSize : 0
             }

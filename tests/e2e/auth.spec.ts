@@ -80,7 +80,7 @@ test("change password logs in with the new one", async ({ page }) => {
 test("theme preference is applied", async ({ page }) => {
   await register(page, uniqueName("Theme"));
   await page.getByLabel("Light").check();
-  await page.getByRole("button", { name: "Save preferences" }).click();
+  await page.getByRole("button", { name: "Save profile" }).click();
   await expect(page.getByText("Saved.")).toBeVisible();
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");

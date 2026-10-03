@@ -24,7 +24,7 @@ export async function changePasswordAction(_prev: FormState, form: FormData): Pr
 export async function updateProfileAction(_prev: FormState, form: FormData): Promise<FormState> {
   await assertSameOrigin();
   const user = await requireUser();
-  const input = { theme: str(form, "theme"), email: str(form, "email") };
+  const input = { theme: str(form, "theme"), email: str(form, "email"), bio: str(form, "bio") };
   const result = await updateProfile(db, user.id, input);
   if (!result.ok) return { fieldErrors: result.fieldErrors, values: input };
   revalidatePath("/", "layout");

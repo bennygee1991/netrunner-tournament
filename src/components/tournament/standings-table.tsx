@@ -1,3 +1,4 @@
+import { PlayerLink } from "@/components/player-link";
 import type { Standing } from "@/engine";
 import { cx } from "@/components/ui";
 
@@ -7,9 +8,12 @@ export function StandingsTable({
   cutSize,
   double,
   dropped,
+  profileOf = () => null,
 }: {
   standings: Standing[];
   nameOf: (id: string) => string;
+  /** Runner name to link to, for account holders. */
+  profileOf?: (id: string) => string | null;
   cutSize: number;
   double: boolean;
   dropped: Set<string>;
@@ -53,7 +57,7 @@ export function StandingsTable({
               <tr key={s.id} className={cx("border-b border-border", inCut && "bg-cyan/10")}>
                 <td className={cx("p-2", inCut ? "text-cyan" : "text-muted")}>{s.rank}</td>
                 <td className="p-2 font-sans text-base font-semibold">
-                  {nameOf(s.id)}
+                  <PlayerLink name={nameOf(s.id)} profile={profileOf(s.id)} />
                   {dropped.has(s.id) && (
                     <span className="ml-1 text-xs font-normal text-muted">(dropped)</span>
                   )}

@@ -137,6 +137,10 @@ test("archive the season, then reset everything", async ({ page }) => {
   await page.getByLabel(`Type "${seasonName}" to archive and reset`).fill(seasonName);
   await archive.click();
   await expect(page.getByText("Season archived to Past seasons.")).toBeVisible();
+  await page.goto("/leaderboards?board=past");
+  await expect(page.getByRole("heading", { name: seasonName })).toBeVisible();
+  await expect(page.getByText("Season champion:")).toBeVisible();
+  await page.goto("/admin/season");
   await expect(page.getByRole("button", { name: "Create season" })).toBeVisible();
 
   await page.getByLabel("Type RESET to unlock").fill("RESET");

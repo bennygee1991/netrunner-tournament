@@ -5,6 +5,7 @@ import { readPrefs } from "@/lib/auth/accounts";
 import { requireUser } from "@/lib/auth/server";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/format";
+import { formatDay } from "@/lib/tournament/dates";
 import { ProfileForm } from "./profile-form";
 
 export const metadata: Metadata = { title: "Account" };
@@ -14,7 +15,12 @@ export default async function AccountPage({ searchParams }: PageProps<"/account"
   const sp = await searchParams;
   const user = await db.user.findUniqueOrThrow({
     where: { id: sessionUser.id },
-    select: { runnerName: true, email: true, prefs: true, role: true, createdAt: true },
+    select: { runnerName: true, email: true, prefs: true, role: true, createdAt: true, bio: true },
+  });
+  const records = await db.eventRecord.findMany({
+    where: { userId: sessionUser.id },
+    orderBy: [{ eventDate: "desc" }, { createdAt: "desc" }],
+    take: 10,
   });
   const signups = await db.signup.findMany({
     where: { userId: sessionUser.id },
@@ -41,7 +47,7 @@ export default async function AccountPage({ searchParams }: PageProps<"/account"
             View public profile
           </Link>
         </p>
-        <ProfileForm theme={readPrefs(user.prefs).theme} email={user.email ?? ""} />
+        <ProfileForm theme={readPrefs(user.prefs).theme} email={user.email ?? ""} bio={user.bio ?? ""} />
       </Card>
 
       <Card tone="magenta">
@@ -55,7 +61,7 @@ export default async function AccountPage({ searchParams }: PageProps<"/account"
                 <Link href={`/events/${s.event.id}`} className="font-semibold hover:text-cyan">
                   {s.event.name}
                 </Link>
-                <span className="font-mono text-sm text-muted">{formatDate(s.event.date)}</span>
+                <span className="font-mono text-sm text-muted">{formatDay(s.event.date)}</span>
               </li>
             ))}
           </ul>
@@ -64,7 +70,31 @@ export default async function AccountPage({ searchParams }: PageProps<"/account"
 
       <Card tone="warn">
         <CardTitle>My results</CardTitle>
-        <p className="text-muted">Your event results and trophies will show here after your first event.</p>
+        {records.length === 0 ? (
+          <p className="text-muted">Your event results and trophies will show here after your first event.</p>
+        ) : (
+          <>
+            <ul className="mb-3 divide-y divide-border">
+              {records.map((r) => (
+                <li key={r.id} className="flex items-center justify-between gap-2 py-2">
+                  <span>
+                    <span className="block font-semibold">{r.eventName}</span>
+                    <span className="block font-mono text-xs text-muted">
+                      {formatDay(r.eventDate)} · {r.wins}-{r.draws}-{r.losses}
+                    </span>
+                  </span>
+                  <span className="text-right font-mono text-sm">
+                    <span className="block">{r.placing}</span>
+                    <span className="block text-cyan">+{r.points}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <Link className={buttonStyles.link} href={`/players/${encodeURIComponent(user.runnerName)}`}>
+              Trophies and full history on your profile
+            </Link>
+          </>
+        )}
       </Card>
 
       <Card>

@@ -12,7 +12,7 @@ const THEMES = [
   { value: "light", label: "Light" },
 ] as const;
 
-export function ProfileForm({ theme, email }: { theme: string; email: string }) {
+export function ProfileForm({ theme, email, bio }: { theme: string; email: string; bio: string }) {
   const [state, action] = useActionState(updateProfileAction, initialFormState);
   const fe = state.fieldErrors ?? {};
   const currentTheme = state.values?.theme ?? theme;
@@ -48,8 +48,25 @@ export function ProfileForm({ theme, email }: { theme: string; email: string }) 
         error={fe.email}
         hint="Only visible to the organizer."
       />
+      <div className="mb-4 flex flex-col gap-1">
+        <label htmlFor="f-bio" className="font-mono text-xs tracking-widest text-muted uppercase">
+          Bio (public, optional)
+        </label>
+        <textarea
+          id="f-bio"
+          name="bio"
+          rows={3}
+          maxLength={280}
+          defaultValue={state.values?.bio ?? bio}
+          aria-invalid={fe.bio ? true : undefined}
+          className="rounded border border-border bg-bg px-3 py-2 text-base text-fg focus:border-cyan"
+          placeholder="Favourite faction, local meta, catchphrase…"
+        />
+        <p className="text-xs text-muted">Shown on your public profile. Up to 280 characters.</p>
+        {fe.bio && <p className="text-sm text-danger">{fe.bio}</p>}
+      </div>
       <SubmitButton pendingText="Saving…" variant="secondary">
-        Save preferences
+        Save profile
       </SubmitButton>
     </form>
   );
