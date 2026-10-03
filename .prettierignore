@@ -8,3 +8,5 @@ coverage
 docs
 *.md
 reference
+.claude
+skills-lock.json
