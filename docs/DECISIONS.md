@@ -49,6 +49,21 @@ These are ported as-is into `src/engine`:
   Swiss if it was the first). Reopen = back to Cut if a cut exists, else Swiss.
 - **Defaults for new events**: single-sided, top 4 cut, rounds = engine default.
 
+## Where the engine deliberately differs from the prototype
+
+Both follow SPEC wording; the prototype behaviour looked accidental. Covered by unit tests.
+
+1. **Restarting the first cut round** re-seeds with *random* sides. The prototype computed sides
+   from the discarded round's games (SPEC: "Cut sides: random in round 1").
+2. **Dropped players do not make the cut**; the next player in the standings moves up, and the cut
+   shrinks by the same halving rule if too few players remain. The prototype seeded dropped players
+   (SPEC: drops are "excluded from future pairings").
+3. **Tied cut games** are accepted and advance the higher seed (prototype had no tie button).
+
+Everything else is verified identical by `tests/engine/differential.test.ts`, which runs the
+prototype's own JavaScript and the engine side by side on 640 random events with the same random
+numbers, comparing pairings, sides, standings, SoS, event points and leaderboards after every step.
+
 ## Owner-accepted interpretations
 
 - Sign-ups: every sign-up is approved by the admin into an entrant ("import sign-ups" in the prototype).
