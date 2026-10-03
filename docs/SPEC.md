@@ -96,3 +96,16 @@ public, so say "taken"), security headers, admin routes behind role check in mid
 5. Admin repair tools (restart, late add, drop, repair, undo, reset season, reset all) with audit log.
 6. Leaderboards, past seasons, player profile pages, Rules page.
 7. Polish, accessibility pass, deploy, backups, README for the organizer.
+
+## 9. Additions (owner request, 2026-10-03)
+- **Home page sign-up**: logged-in players sign up for open events straight from `/` (backend-backed,
+  replaces the prototype's per-browser sign-up doc). Visitors see a call to action to register / log in.
+- **Profiles**: `/players/[runnerName]` with event history, leaderboard finishes and trophies; players
+  can edit a short bio and display preferences from `/account`.
+- **Trophies**, shown on profiles and in Past seasons, kept across season resets, wiped only by
+  "Reset everything":
+  - Season champion, 2nd and 3rd place: awarded when a season is archived.
+  - Event champion: awarded when an event finishes.
+  - Milestones (initial set, owner may change): first event played, 10 events played,
+    undefeated Swiss (finished an event's Swiss with no game lost).
+- **No email**: no notifications and no email password reset. Password resets are admin-only.

@@ -6,7 +6,7 @@ export default defineConfig({
     alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
   },
   test: {
-    include: ["src/**/*.test.ts", "tests/unit/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "tests/unit/**/*.test.ts", "tests/engine/**/*.test.ts"],
     environment: "node",
     setupFiles: ["./tests/setup-env.ts"],
     // DB integration tests share one database, so run files one at a time.

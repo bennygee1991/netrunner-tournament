@@ -17,7 +17,11 @@
     "db:migrate:dev": "prisma migrate dev",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "db:demo": "tsx scripts/demo-data.ts",
+    "db:restore": "tsx scripts/restore-backup.ts",
+    "vercel-build": "prisma generate && prisma migrate deploy && tsx prisma/seed.ts && next build",
+    "admin:reset-password": "tsx scripts/reset-password.ts"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.2.1",
@@ -31,6 +35,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",

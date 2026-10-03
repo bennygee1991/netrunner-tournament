@@ -29,6 +29,10 @@ describe.skipIf(!hasTestDb)("seedAdmin (database)", () => {
     expect(await db.user.count()).toBe(1);
   });
 
+  it("explains what to set when no admin exists and nothing is configured", async () => {
+    await expect(seedAdmin(db, {})).rejects.toThrow(/Set ADMIN_RUNNER_NAME and ADMIN_PASSWORD/);
+  });
+
   it("rejects a weak password", async () => {
     await expect(seedAdmin(db, { ...env, ADMIN_PASSWORD: "password123" })).rejects.toThrow(/too common/);
   });

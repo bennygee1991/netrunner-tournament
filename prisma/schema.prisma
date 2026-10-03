@@ -54,15 +54,19 @@ model User {
   role               Role      @default(PLAYER)
   mustChangePassword Boolean   @default(false)
   disabledAt         DateTime?
+  /// Short public bio shown on the profile page (plain text, max 280 chars).
+  bio                String?
   /// Display preferences (JSON object, validated with zod in the app).
   prefs              Json      @default("{}")
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
-  sessions  Session[]
-  signups   Signup[]
-  entrants  Entrant[]
-  auditLogs AuditLog[]
+  sessions     Session[]
+  signups      Signup[]
+  entrants     Entrant[]
+  auditLogs    AuditLog[]
+  eventRecords EventRecord[]
+  trophies     Trophy[]
 }
 
 /// Server-side session. The cookie holds a random token; only its SHA-256 hash is stored here.
@@ -90,7 +94,7 @@ model RateLimit {
 model Season {
   id         String       @id @default(cuid())
   name       String
-  startDate  DateTime
+  startDate  DateTime     @db.Date
   status     SeasonStatus @default(ACTIVE)
   /// Prize text per leaderboard: { month1?: string, month2?: string, season?: string }.
   prizesJson Json         @default("{}")
@@ -99,6 +103,7 @@ model Season {
 
   events    Event[]
   snapshots LeaderboardSnapshot[]
+  trophies  Trophy[]
 
   @@index([status])
 }
@@ -109,7 +114,7 @@ model Event {
   /// 1..4 within the season.
   index       Int
   name        String
-  date        DateTime
+  date        DateTime    @db.Date
   /// 1 or 2.
   month       Int
   status      EventStatus @default(SIGNUP)
@@ -117,14 +122,18 @@ model Event {
   /// Null = use the engine default for the player count.
   swissRounds Int?
   /// 0, 4 or 8.
-  cutSize     Int         @default(0)
+  cutSize     Int         @default(4)
+  /// Optimistic lock: bumped on every tournament state change.
+  version     Int         @default(0)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
-  season   Season    @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  season   Season        @relation(fields: [seasonId], references: [id], onDelete: Cascade)
   entrants Entrant[]
   signups  Signup[]
   rounds   Round[]
+  records  EventRecord[]
+  trophies Trophy[]
 
   @@unique([seasonId, index])
   @@index([date])
@@ -139,10 +148,10 @@ model Entrant {
   dropped   Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  event   Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
-  matchesA Match[] @relation("MatchA")
-  matchesB Match[] @relation("MatchB")
+  event       Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user        User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  matchesA    Match[] @relation("MatchA")
+  matchesB    Match[] @relation("MatchB")
   matchesCorp Match[] @relation("MatchCorp")
 
   @@unique([eventId, userId])
@@ -219,4 +228,56 @@ model AuditLog {
   actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
 
   @@index([createdAt])
+}
+
+/**
+ * Permanent per-player result of a finished event. Written when an event finishes, removed if it is
+ * reopened. Survives season resets (the event link is cleared) so profiles and milestones keep history.
+ */
+model EventRecord {
+  id         String   @id @default(cuid())
+  eventId    String?
+  seasonName String
+  eventName  String
+  eventDate  DateTime @db.Date
+  userId     String?
+  /// Name at the time (guest name for walk-ins).
+  playerName String
+  placing    String
+  rank       Int
+  points     Int
+  wins       Int
+  draws      Int
+  losses     Int
+  champion   Boolean
+  /// Finished Swiss without losing a game (at least one game played).
+  undefeated Boolean
+  createdAt  DateTime @default(now())
+
+  event Event? @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  user  User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([eventId])
+  @@index([userId])
+}
+
+/// Season podium and event champion trophies (milestones are derived from EventRecord).
+model Trophy {
+  id         String   @id @default(cuid())
+  /// season-champion | season-second | season-third | event-champion
+  kind       String
+  userId     String?
+  playerName String
+  seasonId   String?
+  seasonName String
+  eventId    String?
+  eventName  String?
+  awardedAt  DateTime @default(now())
+
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  season Season? @relation(fields: [seasonId], references: [id], onDelete: SetNull)
+  event  Event?  @relation(fields: [eventId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([eventId])
 }
