@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { PrismaClient } from "@/generated/prisma/client";
+import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 import { audit, type Actor } from "../audit";
 import { getDummyHash, hashPassword, verifyPassword } from "../password";
 import { LIMITS, clear, consume, peek, sweepExpired } from "../rate-limit";
@@ -330,21 +330,128 @@ export async function adminDelete(
   if (typeof confirmation !== "string" || confirmation.trim() !== user.runnerName) {
     return { ok: false, error: `Type the runner name "${user.runnerName}" exactly to confirm.` };
   }
-  const anonName = `Deleted player ${user.id.slice(-4).toUpperCase()}`;
-  await db.$transaction(async (tx) => {
-    const anonymised = await tx.entrant.updateMany({
-      where: { userId: user.id },
-      data: { userId: null, guestName: anonName },
-    });
-    await tx.user.delete({ where: { id: user.id } });
-    await audit(tx, actor, "player.delete", {
-      userId: user.id,
-      before: user.runnerName,
-      after: anonName,
-      entrantsAnonymised: anonymised.count,
-    });
-  });
+  await db.$transaction((tx) =>
+    anonymiseAndDelete(tx, user, (anonName, counts) =>
+      audit(tx, actor, "player.delete", {
+        userId: user.id,
+        before: user.runnerName,
+        after: anonName,
+        ...counts,
+      }),
+    ),
+  );
   return { ok: true };
+}
+
+/**
+ * Removes a person from the league while keeping event results consistent: their entries, saved
+ * results, trophies and archived leaderboards switch to "Deleted player XXXX", then the account
+ * (with its sessions and sign-ups) is deleted. The audit log keeps who did what.
+ */
+async function anonymiseAndDelete(
+  tx: Prisma.TransactionClient,
+  user: { id: string; runnerName: string },
+  /** Runs after anonymising, before the account row is deleted (e.g. to write the audit row). */
+  beforeDelete: (anonName: string, counts: Record<string, number>) => Promise<void>,
+) {
+  const anonName = `Deleted player ${user.id.slice(-4).toUpperCase()}`;
+  const entrants = await tx.entrant.updateMany({
+    where: { userId: user.id },
+    data: { userId: null, guestName: anonName },
+  });
+  const records = await tx.eventRecord.updateMany({
+    where: { userId: user.id },
+    data: { userId: null, playerName: anonName },
+  });
+  const trophies = await tx.trophy.updateMany({
+    where: { userId: user.id },
+    data: { userId: null, playerName: anonName },
+  });
+  let snapshots = 0;
+  for (const snap of await tx.leaderboardSnapshot.findMany()) {
+    const data = snap.rowsJson as { prize?: string; rows?: { userId?: string | null; name?: string }[] };
+    if (!data?.rows?.some((r) => r.userId === user.id)) continue;
+    const rows = data.rows.map((r) =>
+      r.userId === user.id ? { ...r, userId: null, key: `deleted:${anonName}`, name: anonName } : r,
+    );
+    await tx.leaderboardSnapshot.update({ where: { id: snap.id }, data: { rowsJson: { ...data, rows } } });
+    snapshots++;
+  }
+  await beforeDelete(anonName, {
+    entrantsAnonymised: entrants.count,
+    recordsAnonymised: records.count,
+    trophiesAnonymised: trophies.count,
+    snapshotsAnonymised: snapshots,
+  });
+  await tx.user.delete({ where: { id: user.id } });
+}
+
+// ---------------------------------------------------------------- self-service
+
+/** A player deletes their own account: password plus typed runner name. The last organizer cannot. */
+export async function selfDeleteAccount(
+  db: PrismaClient,
+  userId: string,
+  raw: { password?: unknown; confirm?: unknown },
+): Promise<{ ok: true } | Fail> {
+  const user = await db.user.findUnique({ where: { id: userId } });
+  if (!user) return { ok: false, error: "Account not found." };
+  if (typeof raw.confirm !== "string" || raw.confirm.trim() !== user.runnerName) {
+    return { ok: false, error: `Type your runner name "${user.runnerName}" exactly to confirm.` };
+  }
+  if (typeof raw.password !== "string" || !(await verifyPassword(user.passwordHash, raw.password))) {
+    return { ok: false, fieldErrors: { password: "Password is incorrect." } };
+  }
+  if (user.role === "ADMIN" && (await db.user.count({ where: { role: "ADMIN" } })) <= 1) {
+    return { ok: false, error: "You are the only organizer. Make someone else an organizer first." };
+  }
+  await db.$transaction((tx) =>
+    // The audit row is written before the account is deleted; its actor link is then cleared.
+    anonymiseAndDelete(tx, user, (anonName, counts) =>
+      audit(tx, { id: user.id, runnerName: user.runnerName }, "player.self_delete", {
+        before: user.runnerName,
+        after: anonName,
+        ...counts,
+      }),
+    ),
+  );
+  return { ok: true };
+}
+
+/** Everything the league stores about a player, for "Download my data". No password hash. */
+export async function exportMyData(db: PrismaClient, userId: string) {
+  const user = await db.user.findUniqueOrThrow({
+    where: { id: userId },
+    select: {
+      id: true,
+      runnerName: true,
+      email: true,
+      bio: true,
+      role: true,
+      prefs: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+  const [signups, entries, eventRecords, trophies, sessions] = await Promise.all([
+    db.signup.findMany({ where: { userId }, include: { event: { select: { name: true, date: true } } } }),
+    db.entrant.findMany({ where: { userId }, include: { event: { select: { name: true, date: true } } } }),
+    db.eventRecord.findMany({ where: { userId }, orderBy: { eventDate: "asc" } }),
+    db.trophy.findMany({ where: { userId } }),
+    db.session.findMany({
+      where: { userId },
+      select: { createdAt: true, lastSeenAt: true, expiresAt: true },
+    }),
+  ]);
+  return {
+    exportedAt: new Date().toISOString(),
+    account: user,
+    activeSessions: sessions,
+    signups: signups.map((s) => ({ event: s.event.name, eventDate: s.event.date, signedUpAt: s.createdAt })),
+    eventEntries: entries.map((e) => ({ event: e.event.name, eventDate: e.event.date, dropped: e.dropped })),
+    eventResults: eventRecords,
+    trophies,
+  };
 }
 
 function isUniqueViolation(err: unknown): boolean {

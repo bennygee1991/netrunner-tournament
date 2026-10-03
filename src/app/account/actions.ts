@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { changePassword, updateProfile } from "@/lib/auth/accounts";
-import { assertSameOrigin, readSessionToken, requireUser } from "@/lib/auth/server";
+import { changePassword, selfDeleteAccount, updateProfile } from "@/lib/auth/accounts";
+import { assertSameOrigin, clearSessionCookie, readSessionToken, requireUser } from "@/lib/auth/server";
 import { db } from "@/lib/db";
 import { type FormState, str } from "@/lib/forms/state";
 
@@ -29,4 +29,17 @@ export async function updateProfileAction(_prev: FormState, form: FormData): Pro
   if (!result.ok) return { fieldErrors: result.fieldErrors, values: input };
   revalidatePath("/", "layout");
   return { message: "Saved." };
+}
+
+export async function deleteMyAccountAction(_prev: FormState, form: FormData): Promise<FormState> {
+  await assertSameOrigin();
+  const user = await requireUser({ allowForcedChange: true });
+  const result = await selfDeleteAccount(db, user.id, {
+    password: str(form, "password"),
+    confirm: str(form, "confirm"),
+  });
+  if (!result.ok) return { error: result.error, fieldErrors: result.fieldErrors };
+  await clearSessionCookie();
+  revalidatePath("/", "layout");
+  redirect("/?notice=account-deleted");
 }

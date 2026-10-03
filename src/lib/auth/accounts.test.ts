@@ -9,6 +9,8 @@ import {
   adminRename,
   adminSetDisabled,
   adminSetRole,
+  exportMyData,
+  selfDeleteAccount,
   authenticate,
   changePassword,
   readPrefs,
@@ -307,6 +309,113 @@ describe.skipIf(!hasTestDb)("accounts (database)", () => {
       expect(entrant.guestName).toMatch(/^Deleted player [A-Z0-9]{4}$/);
       expect(await db.auditLog.count({ where: { action: "player.delete" } })).toBe(1);
       expect(await adminDelete(db, admin, admin.id, "Boss Admin")).toMatchObject({ ok: false });
+    });
+
+    it("deleting an account also anonymises saved results, trophies and archived boards", async () => {
+      const admin = await makeAdmin();
+      const p = await registerUser(db, reg("Private Pat"), ip());
+      if (!p.ok) throw new Error();
+      const season = await db.season.create({
+        data: { name: "S0", startDate: new Date(), status: "ARCHIVED" },
+      });
+      await db.eventRecord.create({
+        data: {
+          seasonName: "S0",
+          eventName: "E",
+          eventDate: new Date(),
+          userId: p.userId,
+          playerName: "Private Pat",
+          placing: "Champion",
+          rank: 1,
+          points: 10,
+          wins: 2,
+          draws: 0,
+          losses: 0,
+          champion: true,
+          undefeated: true,
+        },
+      });
+      await db.trophy.create({
+        data: { kind: "event-champion", userId: p.userId, playerName: "Private Pat", seasonName: "S0" },
+      });
+      await db.leaderboardSnapshot.create({
+        data: {
+          seasonId: season.id,
+          boardKey: "season",
+          rowsJson: {
+            prize: "",
+            rows: [
+              {
+                key: `u:${p.userId}`,
+                userId: p.userId,
+                name: "Private Pat",
+                rank: 1,
+                total: 10,
+                titles: 1,
+                played: 1,
+              },
+            ],
+          },
+        },
+      });
+      expect(await adminDelete(db, admin, p.userId, "Private Pat")).toEqual({ ok: true });
+      const everything = JSON.stringify([
+        await db.eventRecord.findMany(),
+        await db.trophy.findMany(),
+        await db.leaderboardSnapshot.findMany(),
+      ]);
+      expect(everything).not.toContain("Private Pat");
+      expect(everything).not.toContain(p.userId);
+      expect(everything).toMatch(/Deleted player [A-Z0-9]{4}/);
+      expect(await db.auditLog.findFirstOrThrow({ where: { action: "player.delete" } })).toMatchObject({
+        detailJson: expect.objectContaining({
+          recordsAnonymised: 1,
+          trophiesAnonymised: 1,
+          snapshotsAnonymised: 1,
+        }),
+      });
+    });
+  });
+
+  describe("self-service", () => {
+    it("players delete their own account with password and typed name", async () => {
+      const p = await registerUser(db, reg("Leaving Lee"), ip());
+      if (!p.ok) throw new Error();
+      expect(await selfDeleteAccount(db, p.userId, { password: GOOD, confirm: "leaving lee" })).toMatchObject(
+        { ok: false },
+      );
+      expect(
+        await selfDeleteAccount(db, p.userId, { password: "wrong password!", confirm: "Leaving Lee" }),
+      ).toMatchObject({
+        fieldErrors: { password: "Password is incorrect." },
+      });
+      expect(await selfDeleteAccount(db, p.userId, { password: GOOD, confirm: "Leaving Lee" })).toEqual({
+        ok: true,
+      });
+      expect(await db.user.findUnique({ where: { id: p.userId } })).toBeNull();
+      expect(await validateSession(db, p.token)).toBeNull();
+      const log = await db.auditLog.findFirstOrThrow({ where: { action: "player.self_delete" } });
+      expect(log).toMatchObject({ actorId: null, actorName: "Leaving Lee" });
+    });
+
+    it("the only organizer cannot delete their account", async () => {
+      const admin = await makeAdmin();
+      expect(await selfDeleteAccount(db, admin.id, { password: GOOD, confirm: "Boss Admin" })).toMatchObject({
+        ok: false,
+        error: expect.stringMatching(/only organizer/),
+      });
+    });
+
+    it("download my data includes the account and history but never the password hash", async () => {
+      const p = await registerUser(db, reg("Data Dana", { email: "dana@example.com" }), ip());
+      if (!p.ok) throw new Error();
+      const data = await exportMyData(db, p.userId);
+      expect(data.account).toMatchObject({ runnerName: "Data Dana", email: "dana@example.com" });
+      expect(data.activeSessions).toHaveLength(1);
+      const text = JSON.stringify(data);
+      expect(text).not.toContain("argon2");
+      expect(text).not.toContain("passwordHash");
+      expect(text).not.toContain(p.token);
     });
   });
 });

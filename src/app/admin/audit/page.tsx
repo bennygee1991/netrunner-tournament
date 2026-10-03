@@ -38,6 +38,7 @@ const LABELS: Record<string, string> = {
   "player.delete": "Deleted account",
   "player.link_guest": "Linked walk-in results",
   "player.make_admin": "Made organizer",
+  "player.self_delete": "Player deleted own account",
   "player.remove_admin": "Removed organizer",
   "system.backup_download": "Downloaded backup",
 };

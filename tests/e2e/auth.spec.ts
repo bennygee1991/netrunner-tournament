@@ -91,3 +91,31 @@ test("players cannot reach the admin area", async ({ page }) => {
   const res = await page.goto("/admin/players");
   expect(res?.status()).toBe(404);
 });
+
+test("players download their data and delete their own account", async ({ page }) => {
+  const name = uniqueName("Bye");
+  await register(page, name);
+  await page.goto("/account");
+
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download my data" }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toMatch(/^my-circuit-data-\d{4}-\d{2}-\d{2}\.json$/);
+  const text = await (await import("node:fs/promises")).readFile((await file.path())!, "utf8");
+  expect(JSON.parse(text).account.runnerName).toBe(name);
+  expect(text).not.toContain("argon2");
+
+  const del = page.getByRole("button", { name: "Delete my account" });
+  await expect(del).toBeDisabled();
+  await page.getByLabel(`Type "${name}" to confirm`).fill(name);
+  await page.getByLabel("Your password").fill("wrong password!!");
+  await del.click();
+  await expect(page.getByText("Password is incorrect.")).toBeVisible();
+  await page.getByLabel("Your password").fill(PASSWORD);
+  await del.click();
+  await expect(page).toHaveURL("/?notice=account-deleted");
+  await expect(page.getByText("Your account has been deleted.")).toBeVisible();
+  await expect(page.getByRole("banner").getByRole("link", { name: "Log in" })).toBeVisible();
+  await login(page, name);
+  await expect(formError(page)).toHaveText("Runner name or password is incorrect.");
+});

@@ -10,6 +10,7 @@ export const NOTICES = {
   "season-archived": "Season archived to Past seasons. Ready for a new season.",
   "reset-all": "Everything was reset.",
   "reset-all-accounts": "Everything was reset, including player accounts.",
+  "account-deleted": "Your account has been deleted. Thanks for playing.",
 } as const;
 
 export type NoticeCode = keyof typeof NOTICES;

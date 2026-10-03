@@ -1,5 +1,6 @@
 import { eventWhen } from "@/components/tournament/event-when";
 import Link from "next/link";
+import { Notice } from "@/components/notice";
 import { SignupButton } from "@/components/tournament/signup-button";
 import { EventStatusBadge, formatLine } from "@/components/tournament/status-badge";
 import { Card, CardTitle, buttonStyles } from "@/components/ui";
@@ -8,12 +9,14 @@ import { db } from "@/lib/db";
 import { formatDay } from "@/lib/tournament/dates";
 import { getHomeData } from "@/lib/tournament/queries";
 
-export default async function HomePage() {
+export default async function HomePage({ searchParams }: PageProps<"/">) {
+  const { notice } = await searchParams;
   const user = await getCurrentUser();
   const home = await getHomeData(db, user?.id ?? null);
 
   return (
     <>
+      <Notice code={notice} />
       <section className="mb-6 space-y-2">
         <p className="font-mono text-xs tracking-widest text-magenta uppercase">&gt; jack in</p>
         <h1 className="text-3xl font-bold tracking-wide uppercase">
