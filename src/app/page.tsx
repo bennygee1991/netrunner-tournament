@@ -1,3 +1,4 @@
+import { eventWhen } from "@/components/tournament/event-when";
 import Link from "next/link";
 import { SignupButton } from "@/components/tournament/signup-button";
 import { EventStatusBadge, formatLine } from "@/components/tournament/status-badge";
@@ -50,7 +51,7 @@ export default async function HomePage() {
                   {home.next.name}
                 </Link>
               </h2>
-              <p className="mb-2 font-mono text-sm">{formatDay(home.next.date)}</p>
+              <p className="mb-2 font-mono text-sm">{eventWhen(home.next)}</p>
               <p className="font-mono text-xs text-muted">
                 {formatLine(home.next.matchFormat, home.next.cutSize)}
               </p>
@@ -100,7 +101,7 @@ export default async function HomePage() {
                       <Link href={`/events/${e.id}`} className="text-lg font-semibold hover:text-cyan">
                         {e.name}
                       </Link>
-                      <span className="font-mono text-sm text-muted">{formatDay(e.date)}</span>
+                      <span className="font-mono text-sm text-muted">{eventWhen(e)}</span>
                     </div>
                     <SignupButton eventId={e.id} eventName={e.name} signedUp={e.mine} />
                   </li>

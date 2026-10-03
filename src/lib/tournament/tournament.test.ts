@@ -110,6 +110,49 @@ describe.skipIf(!hasTestDb)("tournament services (database)", () => {
       ).toEqual({ ok: true });
     });
 
+    it("event time, venue and notes are optional, validated and clearable", async () => {
+      const [e1] = await newSeason();
+      const base = {
+        name: "Event 1",
+        date: "2026-10-10",
+        month: "1",
+        matchFormat: "SINGLE",
+        swissRounds: "",
+        cutSize: "4",
+      };
+      expect(
+        await updateEventSetup(db, admin, e1!.id, {
+          ...base,
+          startTime: "18:30",
+          venue: "The Hive",
+          notes: "Bring sleeves",
+        }),
+      ).toEqual({ ok: true });
+      expect(await db.event.findUniqueOrThrow({ where: { id: e1!.id } })).toMatchObject({
+        startTime: "18:30",
+        venue: "The Hive",
+        notes: "Bring sleeves",
+      });
+      expect(await updateEventSetup(db, admin, e1!.id, { ...base, startTime: "25:00" })).toMatchObject({
+        ok: false,
+        fieldErrors: { startTime: expect.any(String) },
+      });
+      // Omitted fields are left alone; empty strings clear them.
+      await updateEventSetup(db, admin, e1!.id, base);
+      expect((await db.event.findUniqueOrThrow({ where: { id: e1!.id } })).venue).toBe("The Hive");
+      await updateEventSetup(db, admin, e1!.id, { ...base, startTime: "", venue: "", notes: "" });
+      expect(await db.event.findUniqueOrThrow({ where: { id: e1!.id } })).toMatchObject({
+        startTime: null,
+        venue: null,
+        notes: null,
+      });
+      // Details can still be edited after the event starts.
+      await db.event.update({ where: { id: e1!.id }, data: { status: "SWISS" } });
+      expect(await updateEventSetup(db, admin, e1!.id, { ...base, venue: "Moved to the library" })).toEqual({
+        ok: true,
+      });
+    });
+
     it("prizes are saved and audited", async () => {
       const [e1] = await newSeason();
       await updatePrizes(db, admin, e1!.seasonId, { month1: "Playmat", month2: "Alt art", season: "Trophy" });

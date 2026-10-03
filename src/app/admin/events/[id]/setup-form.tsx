@@ -21,6 +21,9 @@ export function SetupForm({
     matchFormat: string;
     swissRounds: number | null;
     cutSize: number;
+    startTime: string;
+    venue: string;
+    notes: string;
   };
   locked: boolean;
   autoRounds: number;
@@ -106,6 +109,39 @@ export function SetupForm({
           </div>
         </>
       )}
+      <Field
+        id="setup-time"
+        label="Start time (optional)"
+        name="startTime"
+        type="time"
+        defaultValue={event.startTime}
+        error={fe.startTime}
+      />
+      <Field
+        id="setup-venue"
+        label="Venue (optional)"
+        name="venue"
+        defaultValue={event.venue}
+        maxLength={120}
+        error={fe.venue}
+        placeholder="e.g. The Hive Game Store, 12 High St"
+      />
+      <div className="mb-4 flex flex-col gap-1">
+        <label htmlFor="setup-notes" className={labelClass}>
+          Notes for players (optional)
+        </label>
+        <textarea
+          id="setup-notes"
+          name="notes"
+          rows={3}
+          maxLength={1000}
+          defaultValue={event.notes}
+          aria-invalid={fe.notes ? true : undefined}
+          className="rounded border border-border bg-bg px-3 py-2 text-base text-fg focus:border-cyan"
+          placeholder="Entry fee, parking, what to bring…"
+        />
+        {fe.notes && <p className="text-sm text-danger">{fe.notes}</p>}
+      </div>
       <SubmitButton variant="secondary" pendingText="Saving…">
         Save event
       </SubmitButton>

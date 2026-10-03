@@ -77,7 +77,17 @@ const eventSetupInput = z.object({
   cutSize: z.coerce
     .number()
     .refine((v) => (CUT_SIZES as readonly number[]).includes(v), "Cut must be none, top 4 or top 8."),
+  // Optional details; omitted = unchanged, empty = cleared.
+  startTime: z
+    .string()
+    .trim()
+    .regex(/^$|^([01]\d|2[0-3]):[0-5]\d$/, "Use a 24-hour time like 18:30, or leave it empty.")
+    .optional(),
+  venue: z.string().trim().max(120, "Venue must be at most 120 characters.").optional(),
+  notes: z.string().trim().max(1000, "Notes must be at most 1000 characters.").optional(),
 });
+
+const orNull = (v: string | undefined) => (v === undefined ? undefined : v === "" ? null : v);
 
 /**
  * Event setup. Name, date and leaderboard month can be fixed any time; format, Swiss rounds and
@@ -107,6 +117,9 @@ export async function updateEventSetup(
     matchFormat: event.matchFormat,
     swissRounds: event.swissRounds,
     cutSize: event.cutSize,
+    startTime: event.startTime,
+    venue: event.venue,
+    notes: event.notes,
   };
   const after = { ...v };
   await db.$transaction(async (tx) => {
@@ -119,6 +132,9 @@ export async function updateEventSetup(
         matchFormat: v.matchFormat,
         swissRounds: v.swissRounds,
         cutSize: v.cutSize,
+        startTime: orNull(v.startTime),
+        venue: orNull(v.venue),
+        notes: orNull(v.notes),
         version: { increment: 1 },
       },
     });

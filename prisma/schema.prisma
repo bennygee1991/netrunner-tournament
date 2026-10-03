@@ -115,6 +115,12 @@ model Event {
   index       Int
   name        String
   date        DateTime    @db.Date
+  /// Local start time "HH:MM" in APP_TIMEZONE (optional).
+  startTime   String?
+  /// Where the event is held (optional, plain text).
+  venue       String?
+  /// Extra info for players: address details, parking, entry fee… (optional, plain text).
+  notes       String?
   /// 1 or 2.
   month       Int
   status      EventStatus @default(SIGNUP)

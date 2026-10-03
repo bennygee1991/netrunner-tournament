@@ -91,6 +91,9 @@ export interface EventView {
     seasonId: string;
     seasonName: string;
     seasonActive: boolean;
+    startTime: string | null;
+    venue: string | null;
+    notes: string | null;
   };
   nextStep: ReturnType<typeof nextStep>;
   standings: Standing[];
@@ -154,6 +157,9 @@ export async function getEventView(db: PrismaClient, eventId: string): Promise<E
       seasonId: row.seasonId,
       seasonName: row.season.name,
       seasonActive: row.season.status === "ACTIVE",
+      startTime: row.startTime,
+      venue: row.venue,
+      notes: row.notes,
     },
     nextStep: nextStep(state),
     standings: state.status === "signup" ? [] : standings(state, nameOf),
