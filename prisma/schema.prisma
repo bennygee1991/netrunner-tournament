@@ -1,0 +1,222 @@
+// Netrunner Circuit data model. See docs/SPEC.md section 6.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  PLAYER
+  ADMIN
+}
+
+enum SeasonStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum EventStatus {
+  SIGNUP
+  SWISS
+  CUT
+  DONE
+}
+
+enum MatchFormat {
+  SINGLE
+  DOUBLE
+}
+
+enum Phase {
+  SWISS
+  CUT
+}
+
+/// Result of one game: A won, B won, or Draw (tie).
+enum GameResult {
+  A
+  B
+  D
+}
+
+model User {
+  id                 String    @id @default(cuid())
+  /// Shown with the original casing.
+  runnerName         String
+  /// Lower-cased runner name, used for uniqueness and lookup.
+  runnerNameLower    String    @unique
+  passwordHash       String
+  email              String?
+  role               Role      @default(PLAYER)
+  mustChangePassword Boolean   @default(false)
+  disabledAt         DateTime?
+  /// Display preferences (JSON object, validated with zod in the app).
+  prefs              Json      @default("{}")
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  sessions  Session[]
+  signups   Signup[]
+  entrants  Entrant[]
+  auditLogs AuditLog[]
+}
+
+/// Server-side session. The cookie holds a random token; only its SHA-256 hash is stored here.
+model Session {
+  id         String   @id
+  userId     String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+/// Fixed-window rate limit buckets (login/register throttling), shared across server instances.
+model RateLimit {
+  key     String   @id
+  count   Int
+  resetAt DateTime
+
+  @@index([resetAt])
+}
+
+model Season {
+  id         String       @id @default(cuid())
+  name       String
+  startDate  DateTime
+  status     SeasonStatus @default(ACTIVE)
+  /// Prize text per leaderboard: { month1?: string, month2?: string, season?: string }.
+  prizesJson Json         @default("{}")
+  createdAt  DateTime     @default(now())
+  archivedAt DateTime?
+
+  events    Event[]
+  snapshots LeaderboardSnapshot[]
+
+  @@index([status])
+}
+
+model Event {
+  id          String      @id @default(cuid())
+  seasonId    String
+  /// 1..4 within the season.
+  index       Int
+  name        String
+  date        DateTime
+  /// 1 or 2.
+  month       Int
+  status      EventStatus @default(SIGNUP)
+  matchFormat MatchFormat @default(SINGLE)
+  /// Null = use the engine default for the player count.
+  swissRounds Int?
+  /// 0, 4 or 8.
+  cutSize     Int         @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  season   Season    @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  entrants Entrant[]
+  signups  Signup[]
+  rounds   Round[]
+
+  @@unique([seasonId, index])
+  @@index([date])
+}
+
+/// A player taking part in an event: either a registered user or a walk-in guest.
+model Entrant {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String?
+  guestName String?
+  dropped   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  event   Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  matchesA Match[] @relation("MatchA")
+  matchesB Match[] @relation("MatchB")
+  matchesCorp Match[] @relation("MatchCorp")
+
+  @@unique([eventId, userId])
+  @@index([userId])
+}
+
+model Signup {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String
+  createdAt DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+}
+
+model Round {
+  id        String   @id @default(cuid())
+  eventId   String
+  phase     Phase
+  number    Int
+  createdAt DateTime @default(now())
+
+  event   Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  matches Match[]
+
+  @@unique([eventId, phase, number])
+}
+
+/// One pairing. bEntrantId null = bye. corpEntrantId = Corp in game 1 (sides swap in game 2 for double-sided).
+model Match {
+  id            String      @id @default(cuid())
+  roundId       String
+  table         Int
+  aEntrantId    String
+  bEntrantId    String?
+  corpEntrantId String?
+  result1       GameResult?
+  result2       GameResult?
+
+  round Round    @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  a     Entrant  @relation("MatchA", fields: [aEntrantId], references: [id], onDelete: Cascade)
+  b     Entrant? @relation("MatchB", fields: [bEntrantId], references: [id], onDelete: Cascade)
+  corp  Entrant? @relation("MatchCorp", fields: [corpEntrantId], references: [id], onDelete: Cascade)
+
+  @@index([roundId])
+}
+
+/// Written at season end: board rows (names, points, prizes) frozen for Past seasons.
+model LeaderboardSnapshot {
+  id        String   @id @default(cuid())
+  seasonId  String
+  /// month1 | month2 | season
+  boardKey  String
+  rowsJson  Json
+  createdAt DateTime @default(now())
+
+  season Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+
+  @@unique([seasonId, boardKey])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  /// Runner name at the time of the action, kept even if the account is later deleted.
+  actorName  String
+  action     String
+  detailJson Json     @default("{}")
+  createdAt  DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+}

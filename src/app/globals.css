@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+/*
+ * Netrunner Circuit theme tokens.
+ * Dark cyberpunk by default; light when the device prefers light (unless the user forced dark),
+ * or when the user picked light in their display preferences (data-theme="light").
+ */
+:root {
+  --bg: #07090f;
+  --surface: #0e1320;
+  --surface-2: #151c2e;
+  --border: #22304d;
+  --fg: #e6edf7;
+  --muted: #8b9ab3;
+  --cyan: #22e3ff;
+  --magenta: #ff2bd6;
+  --accent-fg: #04121a;
+  --ok: #3ee08f;
+  --warn: #ffc94a;
+  --danger: #ff4d6d;
+  --glow: 0 0 0.6rem rgb(34 227 255 / 0.35);
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f5f7fb;
+    --surface: #ffffff;
+    --surface-2: #eef2f8;
+    --border: #c9d3e3;
+    --fg: #0d1526;
+    --muted: #4f5d75;
+    --cyan: #007a94;
+    --magenta: #b0108f;
+    --accent-fg: #ffffff;
+    --ok: #137a49;
+    --warn: #8a5a00;
+    --danger: #c0213f;
+    --glow: none;
+    color-scheme: light;
+  }
+}
+
+:root[data-theme="light"] {
+  --bg: #f5f7fb;
+  --surface: #ffffff;
+  --surface-2: #eef2f8;
+  --border: #c9d3e3;
+  --fg: #0d1526;
+  --muted: #4f5d75;
+  --cyan: #007a94;
+  --magenta: #b0108f;
+  --accent-fg: #ffffff;
+  --ok: #137a49;
+  --warn: #8a5a00;
+  --danger: #c0213f;
+  --glow: none;
+  color-scheme: light;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-cyan: var(--cyan);
+  --color-magenta: var(--magenta);
+  --color-accent-fg: var(--accent-fg);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+}
+
+:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
