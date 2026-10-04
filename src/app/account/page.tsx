@@ -5,7 +5,9 @@ import { readPrefs } from "@/lib/auth/accounts";
 import { requireUser } from "@/lib/auth/server";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/format";
+import { FEATURED_MAX, heldKeys, iconOf } from "@/lib/tournament/badges";
 import { formatDay } from "@/lib/tournament/dates";
+import { FeaturedForm } from "./featured-form";
 import { DeleteAccountForm } from "./delete-account";
 import { ProfileForm } from "./profile-form";
 
@@ -24,8 +26,10 @@ export default async function AccountPage({ searchParams }: PageProps<"/account"
       createdAt: true,
       bio: true,
       avatar: true,
+      featuredBadges: true,
     },
   });
+  const featurable = (await heldKeys(db, sessionUser.id)).map((key) => ({ key, ...iconOf(key)! }));
   const records = await db.eventRecord.findMany({
     where: { userId: sessionUser.id },
     orderBy: [{ eventDate: "desc" }, { createdAt: "desc" }],
@@ -63,6 +67,11 @@ export default async function AccountPage({ searchParams }: PageProps<"/account"
           avatar={user.avatar ?? ""}
           userId={sessionUser.id}
         />
+      </Card>
+
+      <Card tone="warn">
+        <CardTitle>Featured trophies and badges</CardTitle>
+        <FeaturedForm options={featurable} selected={user.featuredBadges} max={FEATURED_MAX} />
       </Card>
 
       <Card tone="magenta">

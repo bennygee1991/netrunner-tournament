@@ -1,6 +1,7 @@
-import { MILESTONES, milestoneTrophies } from "@/engine";
+import { BADGES } from "@/engine";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { runnerNameKey } from "../validation";
+import { loadBadges } from "./badges";
 
 /** Public player directory: every active account with their avatar and headline numbers. */
 export async function getPlayerDirectory(
@@ -15,31 +16,49 @@ export async function getPlayerDirectory(
       runnerName: true,
       avatar: true,
       bio: true,
+      featuredBadges: true,
       role: true,
       createdAt: true,
-      _count: { select: { eventRecords: true, trophies: true } },
+      _count: { select: { eventRecords: true } },
       eventRecords: { where: { champion: true }, select: { id: true } },
+      trophies: { select: { kind: true } },
     },
     take: 500,
   });
-  const rows = users.map((u) => ({
-    id: u.id,
-    runnerName: u.runnerName,
-    avatar: u.avatar,
-    bio: u.bio,
-    organizer: u.role === "ADMIN",
-    events: u._count.eventRecords,
-    titles: u.eventRecords.length,
-    trophies: u._count.trophies,
-  }));
+  const summary = await loadBadges(db);
+  const trophyBadges = new Set(BADGES.filter((b) => b.group === "trophy").map((b) => b.key));
+  const rows = users.map((u) => {
+    const earned = summary.byUser.get(u.id) ?? [];
+    // Featured keys can go stale if a trophy is removed (an event reopened): show only held ones.
+    const held = new Set([...earned.map((b) => b.key), ...u.trophies.map((t) => t.kind)]);
+    return {
+      id: u.id,
+      runnerName: u.runnerName,
+      avatar: u.avatar,
+      bio: u.bio,
+      featured: u.featuredBadges.filter((k) => held.has(k)),
+      organizer: u.role === "ADMIN",
+      events: u._count.eventRecords,
+      titles: u.eventRecords.length,
+      trophies: u.trophies.length + earned.filter((b) => trophyBadges.has(b.key)).length,
+      badges: earned.filter((b) => !trophyBadges.has(b.key)).length,
+    };
+  });
   const byName = (a: (typeof rows)[number], b: (typeof rows)[number]) =>
     a.runnerName.localeCompare(b.runnerName);
   if (opts.sort === "events") rows.sort((a, b) => b.events - a.events || byName(a, b));
   else if (opts.sort === "trophies")
-    rows.sort((a, b) => b.trophies - a.trophies || b.titles - a.titles || byName(a, b));
+    rows.sort(
+      (a, b) => b.trophies - a.trophies || b.titles - a.titles || b.badges - a.badges || byName(a, b),
+    );
   else rows.sort(byName);
   return rows;
 }
+
+// Finale trophies are matched to event champions on season, event and player: archived events
+// are deleted, so their trophies no longer carry an event id.
+const finaleKey = (t: { seasonName: string; eventName: string | null; playerName: string }) =>
+  `${t.seasonName}|${t.eventName}|${t.playerName}`;
 
 export interface HallPlayer {
   name: string;
@@ -49,21 +68,12 @@ export interface HallPlayer {
   seed: string;
 }
 
-/** League-wide trophy cabinet: season podiums, event champions and milestone holders. */
+/** League-wide trophy cabinet: season podiums, month and event champions, and badge holders. */
 export async function getHallOfChampions(db: PrismaClient) {
   const trophies = await db.trophy.findMany({ orderBy: { awardedAt: "desc" } });
   const userIds = [...new Set(trophies.map((t) => t.userId).filter((x): x is string => !!x))];
-  const milestoneRows = await db.eventRecord.groupBy({
-    by: ["userId"],
-    where: { userId: { not: null } },
-    _count: { _all: true },
-  });
-  const undefeated = await db.eventRecord.groupBy({
-    by: ["userId"],
-    where: { userId: { not: null }, undefeated: true },
-    _count: { _all: true },
-  });
-  const allIds = [...new Set([...userIds, ...milestoneRows.map((r) => r.userId!)])];
+  const summary = await loadBadges(db);
+  const allIds = [...new Set([...userIds, ...[...summary.holders.values()].flat()])];
   const users = await db.user.findMany({
     where: { id: { in: allIds } },
     select: { id: true, runnerName: true, avatar: true, disabledAt: true },
@@ -98,33 +108,37 @@ export async function getHallOfChampions(db: PrismaClient) {
     .filter((t) => t.kind === "event-champion")
     .map((t) => ({
       id: t.id,
+      finaleKey: finaleKey(t),
       eventName: t.eventName ?? "Event",
       seasonName: t.seasonName,
       awardedAt: t.awardedAt,
       player: player(t.userId, t.playerName),
     }));
 
-  // Milestones (accounts only; walk-ins have no permanent identity).
-  const undefeatedBy = new Map(undefeated.map((r) => [r.userId!, r._count._all]));
-  const holders: Record<string, HallPlayer[]> = {};
-  for (const m of Object.values(MILESTONES)) holders[m.key] = [];
-  for (const r of milestoneRows) {
-    const u = userById.get(r.userId!);
-    if (!u || u.disabledAt) continue;
-    for (const kind of milestoneTrophies({
-      eventsPlayed: r._count._all,
-      undefeatedSwissRuns: undefeatedBy.get(r.userId!) ?? 0,
-    })) {
-      holders[kind]!.push(player(r.userId, u.runnerName));
-    }
-  }
-  for (const list of Object.values(holders)) list.sort((a, b) => a.name.localeCompare(b.name));
-  const milestones = Object.values(MILESTONES).map((m) => ({
-    key: m.key,
-    label: m.label,
-    description: m.description,
-    holders: holders[m.key]!,
-  }));
+  const monthChampions = trophies
+    .filter((t) => t.kind === "month1-champion" || t.kind === "month2-champion")
+    .map((t) => ({
+      id: t.id,
+      month: t.kind === "month1-champion" ? 1 : 2,
+      seasonName: t.seasonName,
+      player: player(t.userId, t.playerName),
+    }));
+  const finaleChampions = new Set(trophies.filter((t) => t.kind === "finale-champion").map(finaleKey));
 
-  return { seasons: [...seasons.values()], eventChampions, milestones };
+  // Badges (accounts only; walk-ins have no permanent identity).
+  const badges = BADGES.map((b) => {
+    const holders = (summary.holders.get(b.key) ?? [])
+      .map((id) => userById.get(id))
+      .filter((u): u is NonNullable<typeof u> => !!u && !u.disabledAt)
+      .map((u) => player(u.id, u.runnerName))
+      .sort((x, y) => x.name.localeCompare(y.name));
+    return { ...b, holders, of: summary.players };
+  });
+
+  return {
+    seasons: [...seasons.values()],
+    monthChampions,
+    eventChampions: eventChampions.map((e) => ({ ...e, finale: finaleChampions.has(e.finaleKey) })),
+    badges,
+  };
 }

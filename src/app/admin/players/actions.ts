@@ -52,7 +52,8 @@ export async function deleteAction(_prev: FormState, form: FormData): Promise<Fo
   const result = await adminDelete(db, actor, str(form, "userId"), str(form, "confirm"));
   if (!result.ok) return { error: result.error };
   revalidatePath("/admin/players");
-  return { message: "Account deleted. Their results are kept under an anonymous name." };
+  // The player's card disappears, taking any inline message with it.
+  redirect("/admin/players?notice=player-deleted");
 }
 
 export async function linkGuestAction(_prev: FormState, form: FormData): Promise<FormState> {

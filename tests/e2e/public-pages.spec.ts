@@ -28,7 +28,7 @@ test("a player's profile shows trophies and event history", async ({ page }) => 
   const name = (await alice.textContent())!.trim();
   await alice.click();
   await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
-  await expect(page.getByRole("list", { name: "Trophies" })).toContainText("Jacked in");
+  await expect(page.getByRole("list", { name: "Badges", exact: true })).toContainText("Jacked in");
   // Placings depend on the random pairings, so only check that the event is listed with a placing.
   const history = page
     .locator("section")

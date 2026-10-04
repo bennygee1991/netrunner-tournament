@@ -11,6 +11,7 @@ export const NOTICES = {
   "reset-all": "Everything was reset.",
   "reset-all-accounts": "Everything was reset, including player accounts.",
   "account-deleted": "Your account has been deleted. Thanks for playing.",
+  "player-deleted": "Account deleted. Their results are kept under an anonymous name.",
   "guide-saved": "Page created.",
   "guides-starter": 'Starter pages added as drafts. Fill them in, then tick "Published" to show them.',
   "guide-restored": "Earlier version restored.",

@@ -1,4 +1,4 @@
-import { seasonTrophies } from "@/engine";
+import { monthTrophies, seasonTrophies } from "@/engine";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { type Actor, audit } from "../audit";
 import { seasonBoards, userIdFromKey } from "./boards";
@@ -20,7 +20,7 @@ const TROPHY_LABEL = { "season-champion": 1, "season-second": 2, "season-third":
 
 /**
  * End of season: freeze the three boards (names, points, prize text) into Past seasons, award the
- * season podium trophies, then clear the season's events, results and sign-ups. Accounts and
+ * season podium and month champion trophies, then clear the season's events, results and sign-ups. Accounts and
  * permanent event records are kept. Requires typing the season name.
  */
 export async function archiveSeason(
@@ -56,6 +56,7 @@ export async function archiveSeason(
     season: { prize: prizes.season, rows: toRows(boards.season) },
   };
   const podium = seasonTrophies(boards.season);
+  const monthly = monthTrophies(boards.month1, boards.month2);
   const unfinished = events.filter((e) => e.status !== "DONE").length;
 
   await db.$transaction(async (tx) => {
@@ -64,7 +65,7 @@ export async function archiveSeason(
         data: { seasonId: season.id, boardKey, rowsJson: JSON.parse(JSON.stringify(data)) },
       });
     }
-    for (const t of podium) {
+    for (const t of [...podium, ...monthly]) {
       await tx.trophy.create({
         data: {
           kind: t.kind,
@@ -87,6 +88,10 @@ export async function archiveSeason(
       unfinishedEvents: unfinished,
       podium: podium.map((t) => ({
         place: TROPHY_LABEL[t.kind as keyof typeof TROPHY_LABEL],
+        player: nameOf(t.playerId),
+      })),
+      monthChampions: monthly.map((t) => ({
+        month: t.kind === "month1-champion" ? 1 : 2,
         player: nameOf(t.playerId),
       })),
       before: "ACTIVE",

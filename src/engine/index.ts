@@ -7,3 +7,4 @@ export * from "./cut";
 export * from "./points";
 export * from "./event";
 export * from "./season";
+export * from "./badges";

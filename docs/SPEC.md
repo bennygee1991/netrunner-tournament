@@ -118,3 +118,18 @@ public, so say "taken"), security headers, admin routes behind role check in mid
 - The cut is decided by the **Season board** (finished events so far): top 8 by season points,
   then event wins; ties broken by the finale's Swiss standings. Seeds fixed when the cut starts.
 - League points from the finale are doubled on the Month 2 and Season boards.
+
+## 11. Trophies and badges (owner decision, 2026-10-04)
+- Playing-based only; no organizer-given awards. Definitions live in `src/engine/badges.ts`
+  (unit-tested) and the Rules page lists them from there.
+- Stored trophies (written when won): season podium and Month 1/Month 2 champions at archive;
+  event champion and finale champion when an event finishes.
+- Computed from permanent event records (never lost): achievement trophies (Back-to-back,
+  Perfect event, Dynasty, Underdog) and 24 badges for attendance, results, Corp/Runner wins and
+  community (Mentor: 20 registered opponents; Reporter: 10 approved own reports).
+- Event records also store: event key, season, finale flag, made cut, cut seed and size, tied cut
+  games, round 1 loss, Corp wins, Runner wins and registered opponents. Records written before
+  this (statsVersion 1) are upgraded on deploy where the event still exists; archived ones keep
+  what the migration could recover.
+- Rarity is "held by N of M players" (M = active accounts with at least one finished event).
+  Players see their locked badges on their own profile and feature up to 3 next to their name.

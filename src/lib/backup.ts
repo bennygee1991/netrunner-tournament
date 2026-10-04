@@ -70,6 +70,13 @@ function revive(row: Record<string, unknown>): Record<string, unknown> {
   return out;
 }
 
+function withEventKey(row: Record<string, unknown>): Record<string, unknown> {
+  if (typeof row.eventKey === "string") return row;
+  const date =
+    row.eventDate instanceof Date ? row.eventDate.toISOString().slice(0, 10) : String(row.eventDate);
+  return { ...row, eventKey: row.eventId ?? `${String(row.seasonName)}|${date}|${String(row.eventName)}` };
+}
+
 /**
  * Restores a backup into an EMPTY database (after `pnpm db:migrate`). Refuses if any table already
  * has rows, so it can never merge into or overwrite live data.
@@ -89,7 +96,9 @@ export async function importBackup(db: PrismaClient, raw: unknown): Promise<Reco
   await db.$transaction(
     async (tx) => {
       for (const t of TABLES) {
-        const rows = (b.tables![t] ?? []).map(revive);
+        let rows = (b.tables![t] ?? []).map(revive);
+        // Backups from before badges have no event key: derive the same one the migration uses.
+        if (t === "eventRecord") rows = rows.map(withEventKey);
         restored[t] = rows.length
           ? (await delegate(tx as unknown as PrismaClient, t).createMany({ data: rows })).count
           : 0;

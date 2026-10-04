@@ -57,13 +57,3 @@ export const SEASON = { events: 4, daysBetweenEvents: 14, eventsPerMonth: 2 } as
  * from the Season board (events so far), ties broken by the finale's Swiss standings.
  */
 export const FINALE = { pointsMultiplier: 2, swissRounds: 1, cutSize: 8 } as const;
-
-export const MILESTONES = {
-  firstEvent: { key: "first-event", label: "Jacked in", description: "Played a first league event." },
-  tenEvents: { key: "ten-events", label: "Veteran", description: "Played 10 league events.", count: 10 },
-  undefeatedSwiss: {
-    key: "undefeated-swiss",
-    label: "Flawless Swiss",
-    description: "Finished an event's Swiss rounds without losing a game.",
-  },
-} as const;

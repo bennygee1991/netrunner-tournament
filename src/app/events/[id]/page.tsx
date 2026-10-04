@@ -15,6 +15,7 @@ import { EventStatusBadge, formatLine } from "@/components/tournament/status-bad
 import { Card, CardTitle, PageTitle, buttonStyles, cx } from "@/components/ui";
 import { getCurrentUser } from "@/lib/auth/server";
 import { db } from "@/lib/db";
+import { earnedAtEvent } from "@/lib/tournament/badges";
 import { getEventView } from "@/lib/tournament/queries";
 
 export async function generateMetadata({ params }: PageProps<"/events/[id]">): Promise<Metadata> {
@@ -38,6 +39,7 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
     meta.status === "SWISS" || meta.status === "CUT" || meta.status === "DONE" ? meta.cutSize : 0;
   const dropped = new Set(view.loaded.state.dropped);
   const hasRounds = view.swiss.length > 0;
+  const earned = meta.status === "DONE" ? await earnedAtEvent(db, meta.id) : [];
   const signedUp = user ? (await db.signup.count({ where: { eventId: id, userId: user.id } })) > 0 : false;
 
   return (
@@ -108,6 +110,35 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
         <Card tone="warn">
           <CardTitle>Final results</CardTitle>
           <ResultsTable results={view.results} nameOf={view.loaded.nameOf} profileOf={profileOf} />
+        </Card>
+      )}
+
+      {earned.length > 0 && (
+        <Card tone="magenta">
+          <CardTitle>Earned at this event</CardTitle>
+          <ul className="space-y-2" aria-label="Trophies and badges earned at this event">
+            {earned.map((p) => (
+              <li key={p.name}>
+                {p.profile ? (
+                  <Link
+                    href={`/players/${encodeURIComponent(p.profile)}`}
+                    className="font-semibold hover:text-cyan"
+                  >
+                    {p.name}
+                  </Link>
+                ) : (
+                  <span className="font-semibold">{p.name}</span>
+                )}
+                <span className="ml-2 inline-flex flex-wrap gap-x-3 text-sm text-muted">
+                  {p.items.map((i) => (
+                    <span key={i.key}>
+                      <span aria-hidden>{i.icon}</span> {i.label}
+                    </span>
+                  ))}
+                </span>
+              </li>
+            ))}
+          </ul>
         </Card>
       )}
 

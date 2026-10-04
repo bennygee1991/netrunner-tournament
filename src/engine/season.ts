@@ -1,5 +1,5 @@
 import { leaderboard, eventResults, type BoardRow } from "./points";
-import { MILESTONES, SEASON } from "./rules";
+import { SEASON } from "./rules";
 import { standings } from "./standings";
 import type { EventState, NameOf } from "./types";
 
@@ -74,11 +74,23 @@ export type TrophyKind =
   | "season-second"
   | "season-third"
   | "event-champion"
-  | (typeof MILESTONES)[keyof typeof MILESTONES]["key"];
+  | "finale-champion"
+  | "month1-champion"
+  | "month2-champion";
 
 export interface TrophyAward {
   playerId: string;
   kind: TrophyKind;
+}
+
+/** Monthly champions: rank 1 of each month board (shared ranks share the trophy). */
+export function monthTrophies(
+  month1: readonly { id: string; rank: number; total: number }[],
+  month2: readonly { id: string; rank: number; total: number }[],
+): TrophyAward[] {
+  const top = (rows: typeof month1, kind: TrophyKind) =>
+    rows.filter((r) => r.rank === 1 && r.total > 0).map((r) => ({ playerId: r.id, kind }));
+  return [...top(month1, "month1-champion"), ...top(month2, "month2-champion")];
 }
 
 /** Season podium trophies from the season board; shared ranks share the trophy. */
@@ -104,18 +116,6 @@ export function undefeatedInSwiss(ev: EventState, nameOf: NameOf): string[] {
   return standings(ev, nameOf)
     .filter((s) => s.losses === 0 && s.opponents.length > 0)
     .map((s) => s.id);
-}
-
-/** Milestone trophies earned given a player's all-time record. */
-export function milestoneTrophies(record: {
-  eventsPlayed: number;
-  undefeatedSwissRuns: number;
-}): TrophyKind[] {
-  const out: TrophyKind[] = [];
-  if (record.eventsPlayed >= 1) out.push(MILESTONES.firstEvent.key);
-  if (record.eventsPlayed >= MILESTONES.tenEvents.count) out.push(MILESTONES.tenEvents.key);
-  if (record.undefeatedSwissRuns >= 1) out.push(MILESTONES.undefeatedSwiss.key);
-  return out;
 }
 
 export interface SeasonStanding {

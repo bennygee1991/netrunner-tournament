@@ -59,6 +59,9 @@ test("admin renames, disables and deletes a player", async ({ page }) => {
   await expect(page.getByText(`Type the runner name "${fixed}" exactly to confirm.`)).toBeVisible();
   await page.getByLabel(`Type "${fixed}" to delete this account`).fill(fixed);
   await page.getByRole("button", { name: "Delete account" }).click();
+  // Wait for the action to finish; navigating away sooner aborts it.
+  await expect(page.getByText(/Account deleted\./)).toBeVisible();
+  await expect(page).toHaveURL(/notice=player-deleted/);
   await page.goto(`/admin/players?q=${encodeURIComponent(fixed)}`);
   await expect(page.getByText("No players found.")).toBeVisible();
 });

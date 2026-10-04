@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { hasTestDb, resetDb, testDb } from "../../../tests/test-db";
+import { setFeaturedBadges } from "./badges";
 import { getHallOfChampions, getPlayerDirectory } from "./community";
 
 describe.skipIf(!hasTestDb)("players directory and hall of champions (database)", () => {
@@ -15,9 +16,11 @@ describe.skipIf(!hasTestDb)("players directory and hall of champions (database)"
     db.user.create({
       data: { runnerName: name, runnerNameLower: name.toLowerCase(), passwordHash: "x", ...extra },
     });
+  let n = 0;
   const record = (userId: string | null, playerName: string, champion = false, undefeated = false) =>
     db.eventRecord.create({
       data: {
+        eventKey: `e${n++}`,
         seasonName: "S1",
         eventName: "E",
         eventDate: new Date(),
@@ -63,6 +66,18 @@ describe.skipIf(!hasTestDb)("players directory and hall of champions (database)"
       "Bob",
     ]);
     expect((await getPlayerDirectory(db, { q: "BO" })).map((p) => p.runnerName)).toEqual(["Bob"]);
+
+    // Featuring: only things you hold, at most 3; stale keys are hidden.
+    expect(byName[0]!.badges).toBeGreaterThan(0);
+    expect(await setFeaturedBadges(db, ada.id, ["event-champion", "first-event"])).toEqual({ ok: true });
+    expect(await setFeaturedBadges(db, ada.id, ["dynasty"])).toMatchObject({ ok: false });
+    expect(await setFeaturedBadges(db, ada.id, ["a", "b", "c", "d"])).toMatchObject({ ok: false });
+    expect((await getPlayerDirectory(db, { q: "ada" }))[0]!.featured).toEqual([
+      "event-champion",
+      "first-event",
+    ]);
+    await db.trophy.deleteMany({ where: { userId: ada.id } });
+    expect((await getPlayerDirectory(db, { q: "ada" }))[0]!.featured).toEqual(["first-event"]);
   });
 
   it("groups season podiums, lists event champions and milestone holders", async () => {
@@ -80,6 +95,21 @@ describe.skipIf(!hasTestDb)("players directory and hall of champions (database)"
         data: { kind, userId: u, playerName: name, seasonId: season.id, seasonName: "S1" },
       });
     }
+    // An archived finale: its event is gone, so the trophies have no event id.
+    for (const kind of ["event-champion", "finale-champion"]) {
+      await db.trophy.create({
+        data: { kind, userId: ada.id, playerName: "Ada", seasonName: "S1", eventName: "Finale" },
+      });
+    }
+    await db.trophy.create({
+      data: {
+        kind: "month2-champion",
+        userId: ada.id,
+        playerName: "Ada",
+        seasonId: season.id,
+        seasonName: "S1",
+      },
+    });
     await db.trophy.create({
       data: {
         kind: "event-champion",
@@ -99,12 +129,21 @@ describe.skipIf(!hasTestDb)("players directory and hall of champions (database)"
       ["season-second", "Cy Renamed", "Cy Renamed"],
       ["season-third", "Walk In", null],
     ]);
-    expect(hall.eventChampions[0]).toMatchObject({ eventName: "Kickoff", player: { name: "Cy Renamed" } });
-    const holders = Object.fromEntries(hall.milestones.map((m) => [m.key, m.holders.map((h) => h.name)]));
-    expect(holders).toEqual({
+    expect(hall.eventChampions[0]).toMatchObject({
+      eventName: "Kickoff",
+      player: { name: "Cy Renamed" },
+      finale: false,
+    });
+    expect(hall.eventChampions.find((e) => e.eventName === "Finale")).toMatchObject({ finale: true });
+    expect(hall.monthChampions).toMatchObject([{ month: 2, seasonName: "S1", player: { name: "Ada" } }]);
+    const holders = Object.fromEntries(hall.badges.map((m) => [m.key, m.holders.map((h) => h.name)]));
+    expect(holders).toMatchObject({
       "first-event": ["Ada", "Cy Renamed"],
+      "five-events": ["Cy Renamed"],
       "ten-events": ["Cy Renamed"],
+      "twentyfive-events": [],
       "undefeated-swiss": ["Ada"],
     });
+    expect(hall.badges[0]!.of).toBe(2);
   });
 });
