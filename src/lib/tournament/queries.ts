@@ -16,7 +16,7 @@ import type { PrismaClient } from "@/generated/prisma/client";
 import { todayIso, toIsoDate } from "./dates";
 import { type MatchReports, matchKey, pendingReports } from "./reports";
 import { readPrizes } from "./season";
-import { type LoadedEvent, eventInclude, toLoaded } from "./state";
+import { type LoadedEvent, ONE_OFF_LABEL, eventInclude, toLoaded } from "./state";
 
 export async function getActiveSeason(db: PrismaClient) {
   const season = await db.season.findFirst({
@@ -106,9 +106,10 @@ export interface EventView {
     effectiveSwissRounds: number;
     cutSize: number;
     version: number;
-    seasonId: string;
+    seasonId: string | null;
     seasonName: string;
     seasonActive: boolean;
+    oneOff: boolean;
     startTime: string | null;
     venue: string | null;
     notes: string | null;
@@ -191,8 +192,10 @@ export async function getEventView(db: PrismaClient, eventId: string): Promise<E
       cutSize: row.cutSize,
       version: row.version,
       seasonId: row.seasonId,
-      seasonName: row.season.name,
-      seasonActive: row.season.status === "ACTIVE",
+      seasonName: row.season?.name ?? ONE_OFF_LABEL,
+      // One-off events take sign-ups on their own (no season to be running).
+      seasonActive: row.season ? row.season.status === "ACTIVE" : true,
+      oneOff: row.seasonId === null,
       startTime: row.startTime,
       venue: row.venue,
       notes: row.notes,

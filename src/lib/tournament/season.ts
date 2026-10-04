@@ -6,7 +6,7 @@ import { fromIsoDate, isoDateSchema, toIsoDate } from "./dates";
 
 type Fail = { ok: false; error?: string; fieldErrors?: Partial<Record<string, string>> };
 
-function fieldErrors(err: z.ZodError) {
+export function fieldErrors(err: z.ZodError) {
   const out: Partial<Record<string, string>> = {};
   for (const i of err.issues) out[String(i.path[0] ?? "form")] ??= i.message;
   return out;
@@ -60,7 +60,7 @@ export async function createSeason(
   return { ok: true, seasonId: season.id };
 }
 
-const eventSetupInput = z.object({
+export const eventSetupInput = z.object({
   name: z.string().trim().min(1, "Give the event a name.").max(60),
   date: isoDateSchema,
   month: z.coerce.number().pipe(z.union([z.literal(1), z.literal(2)])),

@@ -102,7 +102,7 @@ export async function archiveSeason(
 }
 
 /**
- * Wipes every season, event, result, past season, trophy and sign-up. Accounts are kept unless
+ * Wipes every season, event (one-offs included), result, past season, trophy and sign-up. Accounts are kept unless
  * `deleteAccounts` is set, in which case every non-admin account is deleted. The audit log is kept.
  * Requires typing RESET.
  */
@@ -118,10 +118,12 @@ export async function resetEverything(
     const records = await tx.eventRecord.deleteMany({});
     const trophies = await tx.trophy.deleteMany({});
     await tx.season.deleteMany({}); // cascades events, entrants, sign-ups, rounds, matches, snapshots
+    const oneOffs = await tx.event.deleteMany({ where: { seasonId: null } }); // one-off events
     await tx.signup.deleteMany({});
     const accounts = deleteAccounts ? await tx.user.deleteMany({ where: { role: "PLAYER" } }) : { count: 0 };
     await audit(tx, actor, "system.reset_all", {
       seasons,
+      oneOffEvents: oneOffs.count,
       eventRecords: records.count,
       trophies: trophies.count,
       accountsDeleted: accounts.count,

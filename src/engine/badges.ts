@@ -9,7 +9,7 @@ import type { EventState, GameResult, Match, NameOf } from "./types";
  * survive season resets. None of this changes pairings, standings or league points.
  */
 
-export type BadgeGroup = "trophy" | "attendance" | "results" | "sides" | "community";
+export type BadgeGroup = "trophy" | "attendance" | "results" | "sides" | "community" | "oneoff";
 
 export interface BadgeDef {
   key: string;
@@ -37,6 +37,8 @@ export const BADGE_THRESHOLDS = {
   balancedWins: 10,
   dynastyTitles: 2,
   ironmanSeasons: 2,
+  oneOffs: [1, 5, 10],
+  headlinerWins: 3,
 } as const;
 
 export const BADGES: readonly BadgeDef[] = [
@@ -51,8 +53,9 @@ export const BADGES: readonly BadgeDef[] = [
   ),
   def("trophy", "dynasty", "🏛️", "Dynasty", "Won the season twice."),
   def("trophy", "underdog", "🧗", "Underdog", "Won an event from the lowest seed in the cut."),
+  def("trophy", "headliner", "🎤", "Headliner", "Won 3 one-off events."),
   // Turning up.
-  def("attendance", "first-event", "🔌", "Jacked in", "Played a first league event."),
+  def("attendance", "first-event", "🔌", "Jacked in", "Played a first league (season) event."),
   def("attendance", "five-events", "🔋", "Regular", "Played 5 league events."),
   def("attendance", "ten-events", "🎖️", "Veteran", "Played 10 league events."),
   def("attendance", "twentyfive-events", "🛰️", "Old guard", "Played 25 league events."),
@@ -91,8 +94,15 @@ export const BADGES: readonly BadgeDef[] = [
     "Reporter",
     "Reported 10 of your own results that the organizer approved.",
   ),
+  // One-off events (no league points).
+  def("oneoff", "wildcard", "🃏", "Wildcard", "Played a first one-off event."),
+  def("oneoff", "globetrotter", "🧳", "Globetrotter", "Played 5 one-off events."),
+  def("oneoff", "world-tour", "🌍", "World tour", "Played 10 one-off events."),
+  def("oneoff", "special-guest", "🎟️", "Special guest", "Made the cut at a one-off event."),
+  def("oneoff", "crossover", "🔀", "Crossover", "Played both a league event and a one-off event."),
 ];
 
+const ONE_OFF_LADDER = ["wildcard", "globetrotter", "world-tour"] as const;
 const EVENT_LADDER = [
   "first-event",
   "five-events",
@@ -213,6 +223,8 @@ export function playerEventFacts(ev: EventState, nameOf: NameOf): Map<string, Pl
 /** One permanent event record, as the badge rules need it. */
 export interface BadgeRecord {
   eventKey: string;
+  /** One-off event (not part of a season). */
+  oneOff?: boolean;
   seasonKey: string;
   rank: number;
   champion: boolean;
@@ -233,7 +245,7 @@ export interface BadgeRecord {
 }
 
 export interface BadgeContext {
-  /** Every league event in play order (event keys). */
+  /** Every league (season) event in play order (event keys); one-offs are not included. */
   eventOrder: readonly string[];
   /** Every season in play order (season keys); the first one is the league's first season. */
   seasonOrder: readonly string[];
@@ -272,24 +284,8 @@ export function computeBadges(input: PlayerBadgeInput, ctx: BadgeContext): Earne
   let runner = 0;
   let lastTitleIndex: number | null = null;
 
-  for (const r of input.records) {
-    const at = r.eventKey;
-    events++;
-    T.events.forEach((n, i) => {
-      if (events >= n) earn(EVENT_LADDER[i]!, at);
-    });
-
-    const inSeason = (perSeason.get(r.seasonKey) ?? 0) + 1;
-    perSeason.set(r.seasonKey, inSeason);
-    if (inSeason >= SEASON.events && !fullSeasons.has(r.seasonKey)) {
-      fullSeasons.add(r.seasonKey);
-      earn("full-season", at);
-      const si = seasonIndex.get(r.seasonKey);
-      const prev = si !== undefined && si > 0 ? ctx.seasonOrder[si - 1] : undefined;
-      if (prev !== undefined && fullSeasons.has(prev)) earn("ironman", at);
-    }
-    if (ctx.seasonOrder.length && r.seasonKey === ctx.seasonOrder[0]) earn("early-adopter", at);
-
+  /** Badges for how you played, earned at league and one-off events alike. */
+  const playing = (r: BadgeRecord, at: string) => {
     if (r.madeCut) {
       cuts++;
       T.cuts.forEach((n, i) => {
@@ -302,10 +298,6 @@ export function computeBadges(input: PlayerBadgeInput, ctx: BadgeContext): Earne
     if (r.draws + r.cutDraws >= T.ties) earn("diplomat", at);
 
     if (r.champion) {
-      const idx = eventIndex.get(r.eventKey);
-      if (idx !== undefined && lastTitleIndex !== null && idx === lastTitleIndex + 1)
-        earn("back-to-back", at);
-      if (idx !== undefined) lastTitleIndex = idx;
       if (r.madeCut && r.losses === 0 && r.draws === 0 && r.cutDraws === 0 && r.cutLosses === 0)
         earn("perfect-event", at);
       if (r.madeCut && r.cutSeed !== null && r.cutSize !== null && r.cutSeed === r.cutSize)
@@ -322,6 +314,50 @@ export function computeBadges(input: PlayerBadgeInput, ctx: BadgeContext): Earne
 
     for (const o of r.opponentIds) opponents.add(o);
     if (opponents.size >= T.opponents) earn("mentor", at);
+  };
+
+  let oneOffs = 0;
+  let oneOffTitles = 0;
+  let leagueEvents = 0;
+  for (const r of input.records) {
+    const at = r.eventKey;
+    if (r.oneOff) {
+      // One-off events: their own ladder; playing badges below still count them.
+      oneOffs++;
+      T.oneOffs.forEach((n, i) => {
+        if (oneOffs >= n) earn(ONE_OFF_LADDER[i]!, at);
+      });
+      if (r.madeCut) earn("special-guest", at);
+      if (r.champion && ++oneOffTitles >= T.headlinerWins) earn("headliner", at);
+      if (leagueEvents > 0) earn("crossover", at);
+      playing(r, at);
+      continue;
+    }
+    leagueEvents++;
+    if (oneOffs > 0) earn("crossover", at);
+    events++;
+    T.events.forEach((n, i) => {
+      if (events >= n) earn(EVENT_LADDER[i]!, at);
+    });
+
+    const inSeason = (perSeason.get(r.seasonKey) ?? 0) + 1;
+    perSeason.set(r.seasonKey, inSeason);
+    if (inSeason >= SEASON.events && !fullSeasons.has(r.seasonKey)) {
+      fullSeasons.add(r.seasonKey);
+      earn("full-season", at);
+      const si = seasonIndex.get(r.seasonKey);
+      const prev = si !== undefined && si > 0 ? ctx.seasonOrder[si - 1] : undefined;
+      if (prev !== undefined && fullSeasons.has(prev)) earn("ironman", at);
+    }
+    if (ctx.seasonOrder.length && r.seasonKey === ctx.seasonOrder[0]) earn("early-adopter", at);
+
+    if (r.champion) {
+      const idx = eventIndex.get(r.eventKey);
+      if (idx !== undefined && lastTitleIndex !== null && idx === lastTitleIndex + 1)
+        earn("back-to-back", at);
+      if (idx !== undefined) lastTitleIndex = idx;
+    }
+    playing(r, at);
   }
 
   if (input.seasonTitles >= T.dynastyTitles) earn("dynasty", null);

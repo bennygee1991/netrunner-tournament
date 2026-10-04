@@ -57,5 +57,12 @@ export const SEASON = { events: 4, daysBetweenEvents: 14, eventsPerMonth: 2 } as
  * as series matches (higher seed picks sides, sides swap, coin flip for a deciding game 3), worth
  * double league points. All of this is editable per event before it starts.
  */
+/**
+ * Round clock limits in minutes (league house rule, owner decision 2026-10-04): Swiss rounds 45
+ * single-sided and 65 double-sided; a series cut match gets 65 for games 1-2 and 45 for a deciding
+ * game 3; a single-game cut match 45.
+ */
+export const ROUND_MINUTES = { single: 45, double: 65, cutMatch: 65, cutDecider: 45, cutSingle: 45 } as const;
+
 export const LEAGUE_EVENT = { swissRounds: 3, cutSize: 0 } as const;
 export const FINALE = { pointsMultiplier: 2, swissRounds: 3, cutSize: 4, cutFormat: "series" } as const;

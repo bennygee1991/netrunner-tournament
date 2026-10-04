@@ -239,6 +239,44 @@ describe("computeBadges", () => {
     expect(more.find((b) => b.key === "mentor")?.eventKey).toBe("b"); // 20 distinct
   });
 
+  it("one-off events have their own ladder and never count as league events", () => {
+    const one = (k: string, over: Partial<BadgeRecord> = {}) =>
+      rec({ eventKey: k, seasonKey: "One-off", oneOff: true, ...over });
+    const records = [
+      one("o1", { madeCut: true }),
+      ...["o2", "o3", "o4"].map((k) => one(k, { champion: true, rank: 1 })),
+      one("o5"),
+    ];
+    const got = Object.fromEntries(
+      computeBadges(
+        { records, seasonTitles: 0, reportsApproved: 0 },
+        { eventOrder: [], seasonOrder: [] },
+      ).map((b) => [b.key, b.eventKey]),
+    );
+    expect(got).toMatchObject({ wildcard: "o1", "special-guest": "o1", headliner: "o4", globetrotter: "o5" });
+    // Playing badges still count one-offs; league attendance does not.
+    expect(got["made-cut"]).toBe("o1");
+    expect(got["first-event"]).toBeUndefined();
+    expect(got["early-adopter"]).toBeUndefined();
+    expect(got["crossover"]).toBeUndefined();
+    expect(got["back-to-back"]).toBeUndefined();
+  });
+
+  it("awards Crossover for playing both kinds of event, in either order", () => {
+    const league = rec({ eventKey: "l1" });
+    const oneOff = rec({ eventKey: "o1", seasonKey: "One-off", oneOff: true });
+    for (const records of [
+      [league, oneOff],
+      [oneOff, league],
+    ]) {
+      const got = computeBadges(
+        { records, seasonTitles: 0, reportsApproved: 0 },
+        { eventOrder: ["l1"], seasonOrder: ["S1"] },
+      );
+      expect(got.find((b) => b.key === "crossover")?.eventKey).toBe(records[1]!.eventKey);
+    }
+  });
+
   it("awards Dynasty and Reporter without an event", () => {
     const got = keys([], { seasonTitles: 2, reportsApproved: 10 });
     expect(got).toEqual([

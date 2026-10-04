@@ -19,6 +19,7 @@ import { toIsoDate } from "@/lib/tournament/dates";
 import { type EventView, getEventView } from "@/lib/tournament/queries";
 import {
   addPlayerAction,
+  deleteOneOffAction,
   pickSidesAction,
   approveAction,
   approveReportsAction,
@@ -388,6 +389,27 @@ function RepairCard({ view }: { view: EventView }) {
   );
 }
 
+function DeleteOneOffCard({ meta }: { meta: EventView["meta"] }) {
+  return (
+    <Card tone="danger">
+      <CardTitle>Delete this one-off event</CardTitle>
+      <TypedConfirmForm
+        id="delete-one-off"
+        action={deleteOneOffAction}
+        phrase={meta.name}
+        fields={{ eventId: meta.id }}
+        label={`Type "${meta.name}" to delete this event`}
+        buttonText="Delete event"
+      >
+        <p className="mb-2 text-sm text-muted">
+          Removes the event, its entrants, results, and the records and trophies it gave out. This cannot be
+          undone.
+        </p>
+      </TypedConfirmForm>
+    </Card>
+  );
+}
+
 export default async function AdminEventPage({ params, searchParams }: PageProps<"/admin/events/[id]">) {
   const { id } = await params;
   const sp = await searchParams;
@@ -399,11 +421,13 @@ export default async function AdminEventPage({ params, searchParams }: PageProps
 
   return (
     <>
-      <PageTitle kicker={`${meta.seasonName} · run event`}>{meta.name}</PageTitle>
+      <PageTitle kicker={`${meta.oneOff ? "One-off event" : meta.seasonName} · run event`}>
+        {meta.name}
+      </PageTitle>
       <div className="mb-4 flex flex-wrap items-center gap-3 font-mono text-sm text-muted">
         <EventStatusBadge status={meta.status} round={view.swiss.length} />
         <span>{eventWhen(meta)}</span>
-        <span>Month {meta.month}</span>
+        <span>{meta.oneOff ? "One-off · no league points" : `Month ${meta.month}`}</span>
         <span>{formatLine(meta.matchFormat, meta.cutSize, meta.finale, meta.cutFormat)}</span>
         <Link href={`/events/${meta.id}`} className={buttonStyles.link}>
           Public page &amp; flowchart
@@ -418,7 +442,7 @@ export default async function AdminEventPage({ params, searchParams }: PageProps
       {view.results && (
         <Card tone="warn">
           <CardTitle>League points earned</CardTitle>
-          <ResultsTable results={view.results} nameOf={view.loaded.nameOf} />
+          <ResultsTable results={view.results} nameOf={view.loaded.nameOf} noPoints={meta.oneOff} />
         </Card>
       )}
 
@@ -454,11 +478,13 @@ export default async function AdminEventPage({ params, searchParams }: PageProps
             notes: meta.notes ?? "",
             finale: meta.finale,
             cutFormat: meta.cutFormat,
+            oneOff: meta.oneOff,
           }}
           locked={meta.status !== "SIGNUP"}
           autoRounds={meta.effectiveSwissRounds}
         />
       </Card>
+      {meta.oneOff && <DeleteOneOffCard meta={meta} />}
     </>
   );
 }

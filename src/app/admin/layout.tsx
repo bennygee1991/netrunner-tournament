@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/auth/server";
 const ADMIN_NAV = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/season", label: "Season" },
+  { href: "/admin/events", label: "One-offs" },
   { href: "/admin/players", label: "Players" },
   { href: "/admin/guides", label: "Guides" },
   { href: "/admin/audit", label: "Audit" },

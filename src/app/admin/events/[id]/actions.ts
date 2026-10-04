@@ -27,6 +27,7 @@ import {
   removeEntrant,
 } from "@/lib/tournament/registration";
 import { opApproveAgreedReports } from "@/lib/tournament/reports";
+import { deleteOneOffEvent } from "@/lib/tournament/one-off";
 import { cryptoRng } from "@/lib/tournament/rng";
 import { updateEventSetup } from "@/lib/tournament/season";
 
@@ -199,4 +200,15 @@ export async function pickSidesAction(_p: FormState, form: FormData): Promise<Fo
     corpId: str(form, "corpId"),
   });
   return finish(eventId, res, "Sides set.");
+}
+
+export async function deleteOneOffAction(_p: FormState, form: FormData): Promise<FormState> {
+  const actor = await adminActor();
+  const eventId = str(form, "eventId");
+  const res = await deleteOneOffEvent(db, actor, eventId, str(form, "confirm"));
+  if (!res.ok) return { error: res.error };
+  revalidatePath("/events");
+  revalidatePath("/admin/events");
+  revalidatePath("/");
+  redirect("/admin/events?notice=event-deleted");
 }

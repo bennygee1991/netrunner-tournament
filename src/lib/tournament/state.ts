@@ -22,11 +22,17 @@ export interface LoadedEvent {
     name: string;
     date: Date;
     index: number;
-    seasonId: string;
+    /** Null for a one-off event. */
+    seasonId: string | null;
+    /** The season's name, or "One-off" for a one-off event. */
     seasonName: string;
+    oneOff: boolean;
     finale: boolean;
   };
 }
+
+/** Stands in for the season name on one-off events (records, trophies, pages). */
+export const ONE_OFF_LABEL = "One-off";
 
 const STATUS_TO_ENGINE = { SIGNUP: "signup", SWISS: "swiss", CUT: "cut", DONE: "done" } as const;
 const STATUS_TO_DB = { signup: "SIGNUP", swiss: "SWISS", cut: "CUT", done: "DONE" } as const;
@@ -101,7 +107,8 @@ export function toLoaded(row: EventRow): LoadedEvent {
       date: row.date,
       index: row.index,
       seasonId: row.seasonId,
-      seasonName: row.season.name,
+      seasonName: row.season?.name ?? ONE_OFF_LABEL,
+      oneOff: row.seasonId === null,
       finale: row.finale,
     },
   };

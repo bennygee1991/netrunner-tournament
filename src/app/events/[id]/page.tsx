@@ -45,11 +45,11 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
   return (
     <>
       {live && <LiveRefresh />}
-      <PageTitle kicker={meta.seasonName}>{meta.name}</PageTitle>
+      <PageTitle kicker={meta.oneOff ? "One-off event" : meta.seasonName}>{meta.name}</PageTitle>
       <div className="mb-4 flex flex-wrap items-center gap-3 font-mono text-sm text-muted">
         <EventStatusBadge status={meta.status} round={view.swiss.length} />
         <span>{eventWhen(meta)}</span>
-        <span>Month {meta.month}</span>
+        <span>{meta.oneOff ? "One-off · no league points" : `Month ${meta.month}`}</span>
         {user?.role === "ADMIN" && (
           <Link href={`/admin/events/${meta.id}`} className={buttonStyles.link}>
             Run this event
@@ -110,7 +110,12 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
       {view.results && (
         <Card tone="warn">
           <CardTitle>Final results</CardTitle>
-          <ResultsTable results={view.results} nameOf={view.loaded.nameOf} profileOf={profileOf} />
+          <ResultsTable
+            results={view.results}
+            nameOf={view.loaded.nameOf}
+            profileOf={profileOf}
+            noPoints={meta.oneOff}
+          />
         </Card>
       )}
 

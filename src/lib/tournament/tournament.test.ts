@@ -166,8 +166,12 @@ describe.skipIf(!hasTestDb)("tournament services (database)", () => {
 
     it("prizes are saved and audited", async () => {
       const [e1] = await newSeason();
-      await updatePrizes(db, admin, e1!.seasonId, { month1: "Playmat", month2: "Alt art", season: "Trophy" });
-      const s = await db.season.findUniqueOrThrow({ where: { id: e1!.seasonId } });
+      await updatePrizes(db, admin, e1!.seasonId!, {
+        month1: "Playmat",
+        month2: "Alt art",
+        season: "Trophy",
+      });
+      const s = await db.season.findUniqueOrThrow({ where: { id: e1!.seasonId! } });
       expect(readPrizes(s.prizesJson)).toEqual({ month1: "Playmat", month2: "Alt art", season: "Trophy" });
       expect(await db.auditLog.count({ where: { action: "season.prizes" } })).toBe(1);
     });

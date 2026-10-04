@@ -123,8 +123,9 @@ model Season {
 
 model Event {
   id          String      @id @default(cuid())
-  seasonId    String
-  /// 1..4 within the season.
+  /// Null for a one-off event (no season, no league points).
+  seasonId    String?
+  /// 1..4 within the season (0 for one-off events).
   index       Int
   name        String
   date        DateTime    @db.Date
@@ -151,7 +152,10 @@ model Event {
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
-  season   Season         @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  /// Round clock: current round key, its clock and series-cut decider clocks (see src/lib/clock.ts).
+  clockJson Json?
+
+  season   Season?        @relation(fields: [seasonId], references: [id], onDelete: Cascade)
   entrants Entrant[]
   signups  Signup[]
   rounds   Round[]
@@ -293,6 +297,8 @@ model EventRecord {
   runnerWins     Int      @default(0)
   /// Registered opponents (user ids), for the Mentor badge.
   opponentIds    String[] @default([])
+  /// One-off event (not part of a season): no league points, separate badges.
+  oneOff         Boolean  @default(false)
   /// 1 = written before badges existed (side wins and opponents unknown), 2 = full facts.
   statsVersion   Int      @default(1)
   createdAt      DateTime @default(now())

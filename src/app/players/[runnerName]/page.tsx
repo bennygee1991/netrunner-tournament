@@ -184,7 +184,7 @@ export default async function PlayerPage({ params }: PageProps<"/players/[runner
                 </span>
                 <span className="shrink-0 text-right font-mono text-sm">
                   <span className={r.champion ? "block text-warn" : "block"}>{r.placing}</span>
-                  <span className="block text-cyan">+{r.points}</span>
+                  <span className="block text-cyan">{r.oneOff ? "one-off" : `+${r.points}`}</span>
                 </span>
               </li>
             ))}
