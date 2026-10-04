@@ -56,7 +56,11 @@ The **Next step** card always shows the one button you need.
 4. After the last Swiss round, tap **Start top 4/8 cut**, or **Finish event** if there's no cut.
 5. In the cut, tap each winner. The next round is paired automatically and the final finishes the event. A tied cut game advances the higher seed.
 
-Players can follow along on the public event page, which refreshes itself every 20 seconds.
+Players can follow along on the public event page, which refreshes itself every 20 seconds. It
+opens on the **Flowchart**: one column per Swiss round showing who plays whom at each table, their
+sides (C = Corp, R = Runner), results and points after the round, then the standings and the top
+cut bracket. Tap a player to highlight all their matches. On phones it scrolls sideways. **List**
+switches to the classic cards.
 
 **Players can report their own results.** During a round, a signed-in player sees a **Your match**
 card on the event page with **I won / Tie / I lost** (per game for double-sided rounds). Reports

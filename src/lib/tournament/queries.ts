@@ -102,6 +102,8 @@ export interface EventView {
   };
   nextStep: ReturnType<typeof nextStep>;
   standings: Standing[];
+  /** Every player's Swiss points after each round (for the flowchart). */
+  pointsAfter: Record<string, number>[];
   results: Map<string, EventResult> | null;
   swiss: RoundView[];
   cut: RoundView[];
@@ -175,6 +177,11 @@ export async function getEventView(db: PrismaClient, eventId: string): Promise<E
     },
     nextStep: nextStep(state),
     standings: state.status === "signup" ? [] : standings(state, nameOf),
+    pointsAfter: state.rounds.map((_, i) =>
+      Object.fromEntries(
+        standings({ ...state, rounds: state.rounds.slice(0, i + 1) }, nameOf).map((s) => [s.id, s.points]),
+      ),
+    ),
     results: state.status === "done" ? eventResults(state, nameOf) : null,
     swiss: roundViews(state.rounds, "swiss"),
     cut: roundViews(state.cut, "cut"),

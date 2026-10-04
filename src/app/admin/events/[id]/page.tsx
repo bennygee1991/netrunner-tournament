@@ -404,7 +404,7 @@ export default async function AdminEventPage({ params, searchParams }: PageProps
         <span>Month {meta.month}</span>
         <span>{formatLine(meta.matchFormat, meta.cutSize, meta.finale)}</span>
         <Link href={`/events/${meta.id}`} className={buttonStyles.link}>
-          Public page
+          Public page &amp; flowchart
         </Link>
       </div>
 

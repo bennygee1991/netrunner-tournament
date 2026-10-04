@@ -123,6 +123,25 @@ test("the public event page shows results, bracket and standings", async ({ page
   await expect(page.getByRole("heading", { name: "Final results" })).toBeVisible();
   await expect(page.getByRole("cell", { name: "Champion" })).toBeVisible();
   await expect(page.getByRole("cell", { name: "+10" })).toBeVisible();
+  // Flowchart (default view): rounds as columns, standings, then the cut bracket.
+  const chart = page.getByRole("region", { name: /Tournament flowchart/ });
+  await expect(chart).toBeVisible();
+  for (const name of ["Round 1", "Round 2", "Standings", "Semifinals", "Final"]) {
+    await expect(chart.getByRole("region", { name, exact: true })).toBeVisible();
+  }
+  // Tapping a player highlights all their matches.
+  const firstPlayer = chart.getByRole("region", { name: "Standings" }).getByRole("button").first();
+  await firstPlayer.click();
+  await expect(firstPlayer).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByText(/^Highlighting/)).toBeVisible();
+  const pressed = chart.locator('button[aria-pressed="true"]');
+  expect(await pressed.count()).toBeGreaterThanOrEqual(3); // standings + 2 Swiss rounds (+ cut)
+  await page.getByRole("button", { name: "Clear" }).click();
+  await expect(pressed).toHaveCount(0);
+
+  // List view keeps the classic cards.
+  await page.getByRole("link", { name: "List", exact: true }).click();
+  await expect(page).toHaveURL(/view=list/);
   await expect(page.getByRole("heading", { name: "Top cut" })).toBeVisible();
   await expect(page.getByRole("table", { name: "Swiss standings" })).toBeVisible();
   await page.goto("/events");

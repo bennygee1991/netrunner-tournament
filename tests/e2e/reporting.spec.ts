@@ -43,6 +43,9 @@ test("both players report from the event page", async ({ page }) => {
   await expect(page.getByText(`vs ${p2}`)).toBeVisible();
   await page.getByRole("button", { name: "I won" }).click();
   await expect(page.getByText("You reported: i won.")).toBeVisible();
+  const chart = page.getByRole("region", { name: /Tournament flowchart/ });
+  await expect(chart.getByText("awaiting approval", { exact: true })).toBeVisible();
+  await page.goto(`${eventPath}?view=list`);
   await expect(page.getByText(/awaiting organizer approval/)).toBeVisible();
   await logout(page);
 
