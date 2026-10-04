@@ -9,6 +9,7 @@ import {
   opDrop,
   opFinish,
   opPairNext,
+  opPickSides,
   opReopen,
   opResetEvent,
   opRestartRound,
@@ -60,6 +61,7 @@ export async function setupAction(_p: FormState, form: FormData): Promise<FormSt
     venue: str(form, "venue"),
     notes: str(form, "notes"),
     finale: form.get("finale") === "on",
+    cutFormat: str(form, "cutFormat") || undefined,
   };
   const res = await updateEventSetup(db, actor, eventId, input);
   return finish(eventId, res, "Event saved.");
@@ -186,4 +188,15 @@ export async function approveReportsAction(_p: FormState, form: FormData): Promi
     await opApproveAgreedReports(db, actor, eventId, cryptoRng, str(form, "version")),
     "Reported results approved.",
   );
+}
+
+export async function pickSidesAction(_p: FormState, form: FormData): Promise<FormState> {
+  const actor = await adminActor();
+  const eventId = str(form, "eventId");
+  const res = await opPickSides(db, actor, eventId, {
+    round: str(form, "round"),
+    match: str(form, "match"),
+    corpId: str(form, "corpId"),
+  });
+  return finish(eventId, res, "Sides set.");
 }

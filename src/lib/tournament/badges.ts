@@ -62,6 +62,7 @@ export async function loadBadges(db: PrismaClient): Promise<BadgeSummary> {
         cutSeed: true,
         cutSize: true,
         cutDraws: true,
+        cutLosses: true,
         lostFirstRound: true,
         corpWins: true,
         runnerWins: true,

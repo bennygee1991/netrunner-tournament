@@ -112,6 +112,8 @@ export interface PlayerEventFacts {
   cutSize: number | null;
   /** Tied cut games (a tied cut game advances the higher seed). */
   cutDraws: number;
+  /** Cut games lost (series cut matches can be won after losing a game). */
+  cutLosses: number;
   /** Lost their round 1 match (byes never count as a loss). */
   lostFirstRound: boolean;
   /** Games won as Corp / as Runner, Swiss and cut, byes excluded. */
@@ -121,14 +123,18 @@ export interface PlayerEventFacts {
   opponents: string[];
 }
 
-/** Corp side of each game of a match: game 1 uses `corp`, double-sided game 2 swaps. */
+/**
+ * Corp side of each game of a match: game 1 uses `corp`, game 2 swaps (double-sided Swiss and
+ * series cut), a series decider uses `corp3`.
+ */
 function gamesWithCorp(
   games: (GameResult | null)[],
   m: Match,
 ): { g: GameResult | null; corp: string | null }[] {
-  const first = m.corp === null ? null : m.corp === "a" ? m.a : m.b;
+  const id = (side: "a" | "b" | null | undefined) => (side == null ? null : side === "a" ? m.a : m.b);
+  const first = id(m.corp);
   const other = first === null ? null : first === m.a ? m.b : m.a;
-  return games.map((g, i) => ({ g, corp: i === 0 ? first : other }));
+  return games.map((g, i) => ({ g, corp: i === 0 ? first : i === 1 ? other : id(m.corp3) }));
 }
 
 function winnerOf(g: GameResult | null, m: Match): string | null {
@@ -144,6 +150,7 @@ export function playerEventFacts(ev: EventState, nameOf: NameOf): Map<string, Pl
       cutSeed: null,
       cutSize: null,
       cutDraws: 0,
+      cutLosses: 0,
       lostFirstRound: false,
       corpWins: 0,
       runnerWins: 0,
@@ -163,6 +170,7 @@ export function playerEventFacts(ev: EventState, nameOf: NameOf): Map<string, Pl
         fa.cutDraws++;
         fb.cutDraws++;
       }
+      if (cut && w) out.get(w === m.a ? m.b! : m.a)!.cutLosses++;
       if (!w || corp === null) continue;
       const f = out.get(w)!;
       if (w === corp) f.corpWins++;
@@ -181,7 +189,10 @@ export function playerEventFacts(ev: EventState, nameOf: NameOf): Map<string, Pl
       }
     }
   });
-  for (const r of ev.cut) for (const m of r.matches) tally(m, [m.g1], true);
+  for (const r of ev.cut) {
+    for (const m of r.matches)
+      tally(m, ev.cutFormat === "series" ? [m.g1, m.g2, m.g3 ?? null] : [m.g1], true);
+  }
 
   if (ev.cut.length) {
     const seeds = cutSeeds(ev, nameOf);
@@ -213,6 +224,7 @@ export interface BadgeRecord {
   cutSeed: number | null;
   cutSize: number | null;
   cutDraws: number;
+  cutLosses: number;
   lostFirstRound: boolean;
   corpWins: number;
   runnerWins: number;
@@ -294,7 +306,8 @@ export function computeBadges(input: PlayerBadgeInput, ctx: BadgeContext): Earne
       if (idx !== undefined && lastTitleIndex !== null && idx === lastTitleIndex + 1)
         earn("back-to-back", at);
       if (idx !== undefined) lastTitleIndex = idx;
-      if (r.madeCut && r.losses === 0 && r.draws === 0 && r.cutDraws === 0) earn("perfect-event", at);
+      if (r.madeCut && r.losses === 0 && r.draws === 0 && r.cutDraws === 0 && r.cutLosses === 0)
+        earn("perfect-event", at);
       if (r.madeCut && r.cutSeed !== null && r.cutSize !== null && r.cutSeed === r.cutSize)
         earn("underdog", at);
     }

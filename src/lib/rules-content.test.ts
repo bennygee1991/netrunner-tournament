@@ -30,8 +30,10 @@ describe("Rules page stays in sync with the engine", () => {
     expect(text).toContain(
       `×${FINALE.pointsMultiplier} league points: champion ${EVENT_POINTS.champion * FINALE.pointsMultiplier}`,
     );
-    expect(text).toContain(`plays ${FINALE.swissRounds} Swiss round, then a top ${FINALE.cutSize} cut`);
-    expect(text).toContain("decided by the Season leaderboard");
+    expect(text).toContain(`plays ${FINALE.swissRounds} Swiss rounds, then a top ${FINALE.cutSize} cut`);
+    expect(text).toContain("seeded from its own Swiss standings");
+    expect(text).toContain("The higher seed picks Corp or Runner for game 1");
+    expect(text).toContain("game 3 decides it, with sides set by a coin flip");
   });
 
   it("covers every rule area the engine implements", () => {

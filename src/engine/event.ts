@@ -1,4 +1,13 @@
-import { effectiveCutSize, cutSeeds, firstCutRound, nextCutRound } from "./cut";
+import { coinFlip } from "./rng";
+import {
+  cutHigherSeed,
+  cutSeeds,
+  cutWinner,
+  effectiveCutSize,
+  firstCutRound,
+  needsDecider,
+  nextCutRound,
+} from "./cut";
 import { pairRound } from "./pairing";
 import { DEFAULT_CUT_SIZE, defaultSwissRounds } from "./rules";
 import type { EventState, GameResult, NameOf, Phase, Rng, Round } from "./types";
@@ -34,8 +43,12 @@ export function newEvent(init: Partial<EventState> & Pick<EventState, "id">): Ev
   };
 }
 
-/** True when every non-bye match in the round has all its results. */
+/** True when every non-bye match in the round has all its results (series: a winner is known). */
 export function roundComplete(ev: EventState, round: Round, phase: Phase): boolean {
+  if (phase === "cut" && ev.cutFormat === "series") {
+    // Seeds only break a tied decider, which needs both games 1-2 anyway: any seed map works here.
+    return round.matches.every((m) => m.b === null || cutWinner(m, new Map(), "series") !== null);
+  }
   const double = phase === "swiss" && ev.format === "double";
   return round.matches.every(
     (m) => m.b === null || (double ? m.g1 !== null && m.g2 !== null : m.g1 !== null),
@@ -147,7 +160,7 @@ export function restartRound(ev: EventState, phase: Phase, nameOf: NameOf, rng: 
     next.cut.push(firstCutRound(next, nameOf, rng));
   } else {
     const prev = next.cut[next.cut.length - 1]!;
-    next.cut.push(nextCutRound(next.cut, prev, cutSeeds(next, nameOf), rng));
+    next.cut.push(nextCutRound(next.cut, prev, cutSeeds(next, nameOf), rng, next.cutFormat));
   }
   next.status = "cut";
   return next;
@@ -166,7 +179,6 @@ export function undoRound(ev: EventState, phase: Phase): EventState {
   if (next.cut.length > 1) next.cut.pop();
   else {
     next.cut = [];
-    delete next.cutSeedOrder;
     next.status = "swiss";
   }
   return next;
@@ -178,8 +190,8 @@ export interface ResultInput {
   phase: Phase;
   round: number;
   match: number;
-  /** 1, or 2 for double-sided Swiss game 2. */
-  game: 1 | 2;
+  /** 1; 2 for double-sided Swiss and series cut game 2; 3 for a series cut decider. */
+  game: 1 | 2 | 3;
   /** null clears the result. */
   result: GameResult | null;
 }
@@ -207,27 +219,66 @@ export function setResult(ev: EventState, input: ResultInput, nameOf: NameOf, rn
   if (ev.status !== "cut") fail("The cut is not running.");
   if (round !== next.cut.length - 1)
     fail("Only the current cut round can be changed. Undo later rounds first.");
-  if (game !== 1) fail("Cut matches are single games.");
   const r = next.cut[round]!;
   const m = r.matches[match];
   if (!m) fail("No such match.");
-  m.g1 = result;
+  if (ev.cutFormat === "series") {
+    if (m.b === null) fail("A bye has no result to enter.");
+    if (m.corp === null) fail("The higher seed picks sides before game 1.");
+    if (game === 3 && !needsDecider(m))
+      fail("Game 3 is only played when games 1 and 2 leave the match level.");
+    if (game === 1) m.g1 = result;
+    else if (game === 2) m.g2 = result;
+    else m.g3 = result;
+    if (needsDecider(m)) {
+      // Coin flip for game 3 sides, once; kept if games 1-2 are corrected but stay level.
+      if (m.corp3 == null) m.corp3 = coinFlip(rng);
+    } else {
+      m.g3 = null;
+      m.corp3 = null;
+    }
+  } else {
+    if (game !== 1) fail("Cut matches are single games.");
+    m.g1 = result;
+  }
   if (roundComplete(next, r, "cut")) {
     if (r.matches.length === 1) next.status = "done";
-    else next.cut.push(nextCutRound(next.cut, r, cutSeeds(next, nameOf), rng));
+    else next.cut.push(nextCutRound(next.cut, r, cutSeeds(next, nameOf), rng, next.cutFormat));
   }
   return next;
 }
 
 /**
- * Starts the top cut. `seedOrder` (season finale) seeds the cut from that order of entrants instead
- * of the Swiss standings; it is kept on the event so later cut rounds and ties use the same seeds.
+ * Series cut: the higher seed picks sides for game 1 (`corpId` plays Corp); game 2 swaps. Allowed
+ * in the current cut round until a game result is in.
  */
-export function startCut(ev: EventState, nameOf: NameOf, rng: Rng, seedOrder?: string[]): EventState {
+export function pickCutSides(
+  ev: EventState,
+  input: { round: number; match: number; corpId: string },
+): EventState {
+  if (ev.status !== "cut" || ev.cutFormat !== "series") fail("Sides are only picked in a series cut.");
+  if (input.round !== ev.cut.length - 1) fail("Sides can only be picked in the current cut round.");
+  const next = clone(ev);
+  const m = next.cut[input.round]?.matches[input.match];
+  if (!m || m.b === null) fail("No such match.");
+  if (input.corpId !== m.a && input.corpId !== m.b) fail("That player is not in this match.");
+  if (m.g1 !== null || m.g2 !== null)
+    fail("Sides are fixed once a game result is in. Clear the results first.");
+  m.corp = input.corpId === m.a ? "a" : "b";
+  return next;
+}
+
+/** Who picks sides in a series cut match: the higher seed. */
+export function sidePicker(ev: EventState, round: number, match: number, nameOf: NameOf): string | null {
+  const m = ev.cut[round]?.matches[match];
+  if (!m || m.b === null) return null;
+  return cutHigherSeed(m, cutSeeds(ev, nameOf));
+}
+
+/** Starts the top cut, seeded from the Swiss standings. */
+export function startCut(ev: EventState, nameOf: NameOf, rng: Rng): EventState {
   if (nextStep(ev) !== "start-cut") fail("Finish all Swiss rounds before starting the cut.");
   const next = clone(ev);
-  if (seedOrder) next.cutSeedOrder = [...seedOrder];
-  else delete next.cutSeedOrder;
   const first = firstCutRound(next, nameOf, rng);
   if (first.matches.length === 0) fail("Not enough players for a cut.");
   next.cut = [first];
@@ -252,6 +303,5 @@ export function reopenEvent(ev: EventState): EventState {
 /** Reset a single event back to sign-up, keeping its entrants. */
 export function resetEvent(ev: EventState): EventState {
   const next: EventState = { ...clone(ev), rounds: [], cut: [], status: "signup" };
-  delete next.cutSeedOrder;
   return next;
 }

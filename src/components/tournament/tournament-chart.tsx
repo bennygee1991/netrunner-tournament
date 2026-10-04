@@ -99,17 +99,37 @@ function MatchBox({
       </div>
     );
   }
-  const games = double ? [m.g1, m.g2] : [m.g1];
-  const [oa, ob] = outcomes(games);
+  const series = m.series;
+  const games = series ? [m.g1, m.g2, series.g3] : double ? [m.g1, m.g2] : [m.g1];
+  const [oa, ob] = series
+    ? series.winnerId === null
+      ? [null, null]
+      : series.winnerId === m.a.id
+        ? (["W", "L"] as const)
+        : (["L", "W"] as const)
+    : outcomes(games);
+  // Series: game wins each (shown next to the result), sides only for game 1 (they swap after).
+  const wins = (side: "A" | "B") => games.filter((g) => g === side).length;
   const corpA = m.corpId === null ? null : m.corpId === m.a.id;
-  const awaiting = !!m.reports?.reports.length && games.some((g) => g === null);
+  const awaiting = !!m.reports?.reports.length && !oa;
   return (
     <div
       className={cx("rounded border border-border bg-surface", involved && "border-cyan ring-2 ring-cyan")}
     >
       <p className="flex justify-between px-2 pt-1 font-mono text-[10px] text-muted uppercase">
         <span>{label}</span>
-        {awaiting ? <span className="text-warn">awaiting approval</span> : !oa ? <span>playing</span> : null}
+        {awaiting ? (
+          <span className="text-warn">awaiting approval</span>
+        ) : series && m.corpId === null ? (
+          <span>picking sides</span>
+        ) : !oa ? (
+          <span>playing</span>
+        ) : series ? (
+          <span>
+            {wins("A")}-{wins("B")}
+            {series.g3 ? " (g3)" : ""}
+          </span>
+        ) : null}
       </p>
       <Line
         id={m.a.id}

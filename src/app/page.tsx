@@ -56,7 +56,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
               </h2>
               <p className="mb-2 font-mono text-sm">{eventWhen(home.next)}</p>
               <p className="font-mono text-xs text-muted">
-                {formatLine(home.next.matchFormat, home.next.cutSize, home.next.finale)}
+                {formatLine(home.next.matchFormat, home.next.cutSize, home.next.finale, home.next.cutFormat)}
               </p>
               <div className="mt-4 flex flex-wrap gap-3">
                 <Link href={`/events/${home.next.id}`} className={buttonStyles.secondary}>

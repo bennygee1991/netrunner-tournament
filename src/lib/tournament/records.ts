@@ -44,6 +44,7 @@ export async function recordOutcome(tx: Prisma.TransactionClient, loaded: Loaded
       cutSeed: f.cutSeed,
       cutSize: f.cutSize,
       cutDraws: f.cutDraws,
+      cutLosses: f.cutLosses,
       lostFirstRound: f.lostFirstRound,
       corpWins: f.corpWins,
       runnerWins: f.runnerWins,

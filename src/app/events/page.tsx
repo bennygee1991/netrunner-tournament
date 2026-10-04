@@ -36,7 +36,7 @@ export default async function EventsPage() {
                     {e.status === "SIGNUP" ? `${e._count.signups} signed up` : `${e._count.entrants} players`}
                   </p>
                   <p className="font-mono text-xs text-muted">
-                    {formatLine(e.matchFormat, e.cutSize, e.finale)}
+                    {formatLine(e.matchFormat, e.cutSize, e.finale, e.cutFormat)}
                   </p>
                 </div>
                 <EventStatusBadge status={e.status} />

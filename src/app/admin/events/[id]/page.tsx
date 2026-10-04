@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { ActionForm } from "@/components/action-form";
 import { ConfirmSubmit } from "@/components/confirm-submit";
 import { Notice } from "@/components/notice";
-import { FinaleBanner, SeasonSeeding } from "@/components/tournament/season-seeding";
+import { FinaleBanner } from "@/components/tournament/finale-banner";
 import { SubmitButton } from "@/components/submit-button";
 import { MatchCard } from "@/components/tournament/match-card";
 import { ResultEntry } from "@/components/tournament/result-entry";
@@ -19,6 +19,7 @@ import { toIsoDate } from "@/lib/tournament/dates";
 import { type EventView, getEventView } from "@/lib/tournament/queries";
 import {
   addPlayerAction,
+  pickSidesAction,
   approveAction,
   approveReportsAction,
   approveAllAction,
@@ -133,6 +134,7 @@ function Rounds({ view, repair }: { view: EventView; repair: boolean }) {
                   <ResultEntry
                     key={m.index}
                     action={resultAction}
+                    sidesAction={pickSidesAction}
                     eventId={view.meta.id}
                     phase="cut"
                     round={r.index}
@@ -402,14 +404,13 @@ export default async function AdminEventPage({ params, searchParams }: PageProps
         <EventStatusBadge status={meta.status} round={view.swiss.length} />
         <span>{eventWhen(meta)}</span>
         <span>Month {meta.month}</span>
-        <span>{formatLine(meta.matchFormat, meta.cutSize, meta.finale)}</span>
+        <span>{formatLine(meta.matchFormat, meta.cutSize, meta.finale, meta.cutFormat)}</span>
         <Link href={`/events/${meta.id}`} className={buttonStyles.link}>
           Public page &amp; flowchart
         </Link>
       </div>
 
       {meta.finale && <FinaleBanner />}
-      {view.seasonSeeding && <SeasonSeeding rows={view.seasonSeeding} fixed={view.cut.length > 0} />}
       <Notice code={sp.notice} />
       <NextStepCard view={view} />
       <Rounds view={view} repair={repair} />
@@ -427,7 +428,7 @@ export default async function AdminEventPage({ params, searchParams }: PageProps
           <StandingsTable
             standings={view.standings}
             nameOf={view.loaded.nameOf}
-            cutSize={meta.finale ? 0 : meta.cutSize}
+            cutSize={meta.cutSize}
             double={double}
             dropped={new Set(view.loaded.state.dropped)}
           />
@@ -452,6 +453,7 @@ export default async function AdminEventPage({ params, searchParams }: PageProps
             venue: meta.venue ?? "",
             notes: meta.notes ?? "",
             finale: meta.finale,
+            cutFormat: meta.cutFormat,
           }}
           locked={meta.status !== "SIGNUP"}
           autoRounds={meta.effectiveSwissRounds}

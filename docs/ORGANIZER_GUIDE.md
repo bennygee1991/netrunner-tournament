@@ -6,6 +6,7 @@ The **Admin** link appears in the menu when you're logged in as an organizer.
 ## The shape of a season
 
 - **4 events, one every 2 weeks.** Events 1-2 feed the **Month 1** leaderboard and events 3-4 feed **Month 2**. All four feed the **Season** leaderboard.
+- **Events 1-3 are Swiss only:** 3 rounds, points per win, no cut. **Event 4 is the season finale:** 3 Swiss rounds, then a top 4 cut (see below), for double league points.
 - **League points per event:** champion 10 · finalist 7 · top 4 5 · top 8 3 · everyone else who entered 1. Events without a cut use the final Swiss rank with the same table.
 - **End of season:** you hand out prizes, archive the season to **Past seasons**, and start the next one. Accounts, trophies and player histories are kept.
 
@@ -14,7 +15,7 @@ The full player-facing rules are on the site's **Rules** page and always match w
 ## 1. Start a season
 
 1. Go to **Admin → Season → Start a season**.
-2. Enter a name and the date of the first event, then click **Create season**. This creates four events, two weeks apart.
+2. Enter a name and the date of the first event, then click **Create season**. This creates four events, two weeks apart, already set up in the league format (you can still change any of them before it starts).
 3. Fill in the **Prizes** for Month 1, Month 2 and the Season, then click **Save prizes**. Players see them on the leaderboards.
 
 ## 2. Set up each event
@@ -25,16 +26,26 @@ Open the event from **Admin → Season**. Under **Event setup** you can set:
   - **Single-sided:** 1 game per round, about 40-45 minutes. The site picks who plays Corp so each player's sides stay even.
   - **Double-sided:** 2 games per round, about 65-70 minutes. A coin flip decides game 1's sides, then they swap.
 - **Swiss rounds:** leave empty for the recommended number (it depends on how many players turn up), or set 1-9.
-- **Top cut:** none, top 4 or top 8. If fewer players turn up, the cut shrinks to fit. Top 8 is single elimination, a house rule; official NSG top 8s are double elimination.
+- **Top cut:** none, top 4 or top 8. If fewer players turn up, the cut shrinks to fit. The cut is single elimination, a house rule; official NSG top 8s are double elimination.
+- **Cut matches:** the league format (higher seed picks sides, 2 games + a decider), or single games with sides set by the site.
 
 Format, rounds and cut lock once the event starts.
 
 ### The season finale
 
-The last event of each season is created as the **Season finale**: 1 Swiss round, then a top 8
-cut. Players get into the cut by their **Season leaderboard** position, not the Swiss round, and
-are seeded in that order (ties broken by the finale's Swiss round). The event page shows a
-**Cut qualification** table while it runs. League points from the finale count double.
+The last event of each season is created as the **Season finale**: 3 Swiss rounds, then a top 4
+cut seeded from the finale's own Swiss standings (1 v 4, 2 v 3). League points from the finale
+count double.
+
+**How a cut match works (league format)**
+1. The higher seed picks Corp or Runner for game 1. They can do it on their phone (the **Your
+   match** card), or you can tap it for them on the event's admin page.
+2. Game 2: sides swap.
+3. If it's 1-1 (or both games tied), the site flips a coin for game 3's sides and shows it.
+4. The winner goes through to the final, which is played the same way.
+
+A tied game counts for neither player, so one win and one tie wins the match. If game 3 ends
+tied, the higher seed advances. Sides can be changed until the first result of the match is in.
 
 ## 3. Sign-ups
 
@@ -54,7 +65,7 @@ The **Next step** card always shows the one button you need.
 2. **Enter results** by tapping the winner, or **Tie**. Tap the same button again to clear a mistake. Each player's side (Corp or Runner) is shown under their name. Double-sided rounds have two rows (game 1 and game 2).
 3. When every result is in, tap **Pair round 2**, and so on. Players who have the same score meet; the same two players never meet twice unless there's no other way.
 4. After the last Swiss round, tap **Start top 4/8 cut**, or **Finish event** if there's no cut.
-5. In the cut, tap each winner. The next round is paired automatically and the final finishes the event. A tied cut game advances the higher seed.
+5. In the cut, enter each game. In the league format, pick sides first if the higher seed hasn't. The next round is paired automatically when every match has a winner, and the final finishes the event.
 
 Players can follow along on the public event page, which refreshes itself every 20 seconds. It
 opens on the **Flowchart**: one column per Swiss round showing who plays whom at each table, their

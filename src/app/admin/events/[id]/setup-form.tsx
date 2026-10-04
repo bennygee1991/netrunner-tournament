@@ -25,6 +25,7 @@ export function SetupForm({
     venue: string;
     notes: string;
     finale: boolean;
+    cutFormat: string;
   };
   locked: boolean;
   autoRounds: number;
@@ -60,6 +61,7 @@ export function SetupForm({
           <input type="hidden" name="swissRounds" value={event.swissRounds ?? ""} />
           <input type="hidden" name="cutSize" value={event.cutSize} />
           <input type="hidden" name="finale" value={event.finale ? "on" : ""} />
+          <input type="hidden" name="cutFormat" value={event.cutFormat} />
           <p className="mb-4 text-sm text-muted">
             Format, Swiss rounds and cut size are locked once the event starts.
           </p>
@@ -109,6 +111,21 @@ export function SetupForm({
             </select>
             {fe.cutSize && <p className="text-sm text-danger">{fe.cutSize}</p>}
           </div>
+          <div className="mb-4 flex flex-col gap-1">
+            <label htmlFor="setup-cut-format" className={labelClass}>
+              Cut matches
+            </label>
+            <select
+              id="setup-cut-format"
+              name="cutFormat"
+              defaultValue={event.cutFormat}
+              className={selectClass}
+            >
+              <option value="SERIES">League: higher seed picks sides, 2 games + decider</option>
+              <option value="SINGLE">Single game, sides set by the site</option>
+            </select>
+            <p className="text-xs text-muted">Only used when the event has a top cut.</p>
+          </div>
           <label className="mb-4 flex min-h-11 items-start gap-3">
             <input
               type="checkbox"
@@ -119,8 +136,7 @@ export function SetupForm({
             <span>
               Season finale
               <span className="block text-xs text-muted">
-                Double league points, and the top cut is seeded from the Season leaderboard (usually 1 Swiss
-                round, top 8).
+                Double league points (usually the last event: Swiss, then a top 4 cut).
               </span>
             </span>
           </label>

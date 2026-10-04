@@ -13,8 +13,9 @@ export type Phase = "swiss" | "cut";
 
 /**
  * One pairing. `b === null` is a bye (scored as winning every game).
- * Single-sided Swiss and cut matches use `g1` only. Double-sided Swiss uses `g1` and `g2`,
- * with sides swapped in game 2.
+ * Single-sided Swiss and single-game cut matches use `g1` only. Double-sided Swiss uses `g1` and
+ * `g2`, with sides swapped in game 2. Series cut matches use `g1`, `g2` (sides swapped) and, when
+ * level after two games, `g3` with Corp `corp3`; `corp` stays null until the higher seed picks.
  */
 export interface Match {
   a: string;
@@ -22,6 +23,10 @@ export interface Match {
   corp: Side | null;
   g1: GameResult | null;
   g2: GameResult | null;
+  /** Series cut matches only: deciding game 3 (played when games 1-2 leave the match level). */
+  g3?: GameResult | null;
+  /** Series cut matches only: Corp in game 3, set by a coin flip when the decider is needed. */
+  corp3?: Side | null;
 }
 
 export interface Round {
@@ -44,11 +49,14 @@ export interface EventState {
   /** League points multiplier for this event (the season finale doubles points). Default 1. */
   pointsMultiplier?: number;
   /**
-   * Season finale: the cut is seeded from this order (season standings) instead of the Swiss
-   * standings. Set when the cut starts; absent for normal events.
+   * How cut matches are played. "single" (default, prototype): one game, sides by the cut rules.
+   * "series" (league house rule): the higher seed picks sides for game 1, sides swap for game 2,
+   * and a coin flip sets sides for a deciding game 3 if the match is level.
    */
-  cutSeedOrder?: string[];
+  cutFormat?: CutFormat;
 }
+
+export type CutFormat = "single" | "series";
 
 /** Display name for a player id; used for the final, deterministic tiebreak. */
 export type NameOf = (id: string) => string;

@@ -6,7 +6,7 @@ import { LiveRefresh } from "@/components/live-refresh";
 import { MatchCard } from "@/components/tournament/match-card";
 import { MyMatch } from "@/components/tournament/my-match";
 import { myOpenMatch } from "@/lib/tournament/my-match";
-import { FinaleBanner, SeasonSeeding } from "@/components/tournament/season-seeding";
+import { FinaleBanner } from "@/components/tournament/finale-banner";
 import { ResultsTable } from "@/components/tournament/results-table";
 import { SignupButton } from "@/components/tournament/signup-button";
 import { TournamentChart } from "@/components/tournament/tournament-chart";
@@ -57,8 +57,9 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
         )}
       </div>
       <p className="mb-4 font-mono text-xs text-muted">
-        {formatLine(meta.matchFormat, meta.cutSize, meta.finale)}
+        {formatLine(meta.matchFormat, meta.cutSize, meta.finale, meta.cutFormat)}
         {meta.cutSize === 8 &&
+          meta.cutFormat === "SINGLE" &&
           " · single elimination (house rule; official top 8 cuts are double elimination)"}
       </p>
 
@@ -181,12 +182,11 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
                 name: dropped.has(s.id) ? `${view.loaded.nameOf(s.id)} (dropped)` : view.loaded.nameOf(s.id),
                 rank: s.rank,
                 points: s.points,
-                inCut: !meta.finale && standingsCut > 0 && s.rank <= standingsCut,
+                inCut: standingsCut > 0 && s.rank <= standingsCut,
               }))}
-              cutSize={meta.finale ? 0 : standingsCut}
+              cutSize={standingsCut}
             />
           </Card>
-          {view.seasonSeeding && <SeasonSeeding rows={view.seasonSeeding} fixed={view.cut.length > 0} />}
         </>
       ) : (
         <>
@@ -245,7 +245,6 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
               />
             </Card>
           )}
-          {view.seasonSeeding && <SeasonSeeding rows={view.seasonSeeding} fixed={view.cut.length > 0} />}
         </>
       )}
     </>

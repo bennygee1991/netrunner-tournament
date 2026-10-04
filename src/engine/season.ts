@@ -117,28 +117,3 @@ export function undefeatedInSwiss(ev: EventState, nameOf: NameOf): string[] {
     .filter((s) => s.losses === 0 && s.opponents.length > 0)
     .map((s) => s.id);
 }
-
-export interface SeasonStanding {
-  /** Season board total so far and event wins. */
-  total: number;
-  titles: number;
-}
-
-/**
- * Season finale seeding: entrants ordered by season points (then event wins), ties broken by the
- * finale's Swiss standings. Entrants with no season points come last, in Swiss order.
- */
-export function finaleSeedOrder(
-  ev: EventState,
-  nameOf: NameOf,
-  seasonOf: (entrantId: string) => SeasonStanding | undefined,
-): string[] {
-  const swissRank = new Map(standings(ev, nameOf).map((s) => [s.id, s.rank]));
-  return [...ev.entrants].sort((a, b) => {
-    const sa = seasonOf(a) ?? { total: 0, titles: 0 };
-    const sb = seasonOf(b) ?? { total: 0, titles: 0 };
-    return (
-      sb.total - sa.total || sb.titles - sa.titles || (swissRank.get(a) ?? 1e9) - (swissRank.get(b) ?? 1e9)
-    );
-  });
-}

@@ -26,6 +26,11 @@ enum EventStatus {
   DONE
 }
 
+enum CutFormat {
+  SINGLE
+  SERIES
+}
+
 enum MatchFormat {
   SINGLE
   DOUBLE
@@ -117,34 +122,34 @@ model Season {
 }
 
 model Event {
-  id           String      @id @default(cuid())
-  seasonId     String
+  id          String      @id @default(cuid())
+  seasonId    String
   /// 1..4 within the season.
-  index        Int
-  name         String
-  date         DateTime    @db.Date
+  index       Int
+  name        String
+  date        DateTime    @db.Date
   /// Local start time "HH:MM" in APP_TIMEZONE (optional).
-  startTime    String?
+  startTime   String?
   /// Where the event is held (optional, plain text).
-  venue        String?
+  venue       String?
   /// Extra info for players: address details, parking, entry fee… (optional, plain text).
-  notes        String?
+  notes       String?
   /// 1 or 2.
-  month        Int
-  status       EventStatus @default(SIGNUP)
-  matchFormat  MatchFormat @default(SINGLE)
+  month       Int
+  status      EventStatus @default(SIGNUP)
+  matchFormat MatchFormat @default(SINGLE)
   /// Null = use the engine default for the player count.
-  swissRounds  Int?
+  swissRounds Int?
   /// 0, 4 or 8.
-  cutSize      Int         @default(4)
-  /// Season finale: double league points; the top cut is seeded from the Season board.
-  finale       Boolean     @default(false)
-  /// Finale only: entrant ids in season-seed order, fixed when the cut starts.
-  cutSeedOrder Json?
+  cutSize     Int         @default(4)
+  /// Season finale: double league points.
+  finale      Boolean     @default(false)
+  /// How cut matches are played (SERIES: higher seed picks sides, swap, coin-flip game 3).
+  cutFormat   CutFormat   @default(SINGLE)
   /// Optimistic lock: bumped on every tournament state change.
-  version      Int         @default(0)
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  version     Int         @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
   season   Season         @relation(fields: [seasonId], references: [id], onDelete: Cascade)
   entrants Entrant[]
@@ -204,14 +209,17 @@ model Round {
 
 /// One pairing. bEntrantId null = bye. corpEntrantId = Corp in game 1 (sides swap in game 2 for double-sided).
 model Match {
-  id            String      @id @default(cuid())
-  roundId       String
-  table         Int
-  aEntrantId    String
-  bEntrantId    String?
-  corpEntrantId String?
-  result1       GameResult?
-  result2       GameResult?
+  id             String      @id @default(cuid())
+  roundId        String
+  table          Int
+  aEntrantId     String
+  bEntrantId     String?
+  corpEntrantId  String?
+  result1        GameResult?
+  result2        GameResult?
+  /// Series cut decider (game 3) and its Corp (coin flip).
+  result3        GameResult?
+  corp3EntrantId String?
 
   round Round    @relation(fields: [roundId], references: [id], onDelete: Cascade)
   a     Entrant  @relation("MatchA", fields: [aEntrantId], references: [id], onDelete: Cascade)
@@ -279,6 +287,7 @@ model EventRecord {
   cutSeed        Int?
   cutSize        Int?
   cutDraws       Int      @default(0)
+  cutLosses      Int      @default(0)
   lostFirstRound Boolean  @default(false)
   corpWins       Int      @default(0)
   runnerWins     Int      @default(0)

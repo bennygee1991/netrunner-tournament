@@ -1,8 +1,12 @@
 import {
   type EventResult,
   type Standing,
+  cutHigherSeed,
   cutRoundLabel,
   cutSeeds,
+  cutWinner,
+  needsDecider,
+  roundComplete,
   defaultSwissRounds,
   eventResults,
   nextStep,
@@ -10,7 +14,6 @@ import {
 } from "@/engine";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { todayIso, toIsoDate } from "./dates";
-import { type SeedingRow, seasonStandingsByPlayer, seedingTable } from "./finale";
 import { type MatchReports, matchKey, pendingReports } from "./reports";
 import { readPrizes } from "./season";
 import { type LoadedEvent, eventInclude, toLoaded } from "./state";
@@ -68,6 +71,17 @@ export interface MatchView {
   corpId: string | null;
   g1: "A" | "B" | "D" | null;
   g2: "A" | "B" | "D" | null;
+  /**
+   * Series cut matches only: game 3, its Corp, who picks sides (higher seed), whether game 3 is
+   * needed, and the match winner once known. Null for every other match.
+   */
+  series: {
+    g3: "A" | "B" | "D" | null;
+    corp3Id: string | null;
+    pickerId: string;
+    decider: boolean;
+    winnerId: string | null;
+  } | null;
   /** Player reports waiting for the organizer (open games only). */
   reports: MatchReports | null;
 }
@@ -99,6 +113,7 @@ export interface EventView {
     venue: string | null;
     notes: string | null;
     finale: boolean;
+    cutFormat: "SINGLE" | "SERIES";
   };
   nextStep: ReturnType<typeof nextStep>;
   standings: Standing[];
@@ -111,8 +126,6 @@ export interface EventView {
   entrants: LoadedEvent["entrants"];
   /** Sign-ups not yet approved. */
   pending: { userId: string; runnerName: string; at: Date }[];
-  /** Season finale: cut qualification by season standings (projected until the cut starts). */
-  seasonSeeding: SeedingRow[] | null;
   /** Number of games whose player reports agree and can be approved in one go. */
   agreedReports: number;
 }
@@ -128,13 +141,13 @@ export async function getEventView(db: PrismaClient, eventId: string): Promise<E
   const { state, nameOf } = loaded;
   const player = (id: string) => ({ id, name: nameOf(id) });
   const reports = await pendingReports(db, loaded);
+  const series = state.cutFormat === "series";
+  const seedMap = state.cut.length ? cutSeeds(state, nameOf) : new Map<string, number>();
   const roundViews = (rounds: typeof state.rounds, phase: "swiss" | "cut"): RoundView[] =>
     rounds.map((r, i) => ({
       index: i,
       label: phase === "swiss" ? `Round ${i + 1}` : cutRoundLabel(r.matches.length),
-      complete: r.matches.every(
-        (m) => m.b === null || (phase === "swiss" && state.format === "double" ? m.g1 && m.g2 : m.g1),
-      ),
+      complete: roundComplete(state, r, phase),
       matches: r.matches.map((m, j) => ({
         index: j,
         a: player(m.a),
@@ -142,6 +155,16 @@ export async function getEventView(db: PrismaClient, eventId: string): Promise<E
         corpId: m.corp === null || m.b === null ? null : m.corp === "a" ? m.a : m.b,
         g1: m.g1,
         g2: m.g2,
+        series:
+          phase === "cut" && series && m.b
+            ? {
+                g3: m.g3 ?? null,
+                corp3Id: m.corp3 == null ? null : m.corp3 === "a" ? m.a : m.b,
+                pickerId: cutHigherSeed(m, seedMap),
+                decider: needsDecider(m),
+                winnerId: cutWinner(m, seedMap, "series"),
+              }
+            : null,
         reports: reports.get(matchKey(phase, i, j)) ?? null,
       })),
     }));
@@ -174,6 +197,7 @@ export async function getEventView(db: PrismaClient, eventId: string): Promise<E
       venue: row.venue,
       notes: row.notes,
       finale: row.finale,
+      cutFormat: row.cutFormat,
     },
     nextStep: nextStep(state),
     standings: state.status === "signup" ? [] : standings(state, nameOf),
@@ -187,10 +211,6 @@ export async function getEventView(db: PrismaClient, eventId: string): Promise<E
     cut: roundViews(state.cut, "cut"),
     seeds: state.cut.length ? cutSeeds(state, nameOf) : new Map(),
     entrants: loaded.entrants,
-    seasonSeeding:
-      row.finale && state.status !== "signup"
-        ? seedingTable(state, nameOf, loaded.entrants, await seasonStandingsByPlayer(db, row.seasonId))
-        : null,
     agreedReports: [...reports.values()].reduce(
       (t, r) => t + Object.values(r.status).filter((s) => s && s !== "conflict").length,
       0,

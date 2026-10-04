@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CUT_SIZES, FINALE, SWISS_ROUNDS_MAX, SWISS_ROUNDS_MIN, planSeason } from "@/engine";
+import { CUT_SIZES, FINALE, LEAGUE_EVENT, SWISS_ROUNDS_MAX, SWISS_ROUNDS_MIN, planSeason } from "@/engine";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { type Actor, audit } from "../audit";
 import { fromIsoDate, isoDateSchema, toIsoDate } from "./dates";
@@ -41,7 +41,15 @@ export async function createSeason(
             name: e.finale ? "Season finale" : e.name,
             date: fromIsoDate(e.date),
             month: e.month,
-            ...(e.finale ? { finale: true, swissRounds: FINALE.swissRounds, cutSize: FINALE.cutSize } : {}),
+            // League format: events 1-3 Swiss only; the finale adds a top 4 series cut.
+            ...(e.finale
+              ? {
+                  finale: true,
+                  swissRounds: FINALE.swissRounds,
+                  cutSize: FINALE.cutSize,
+                  cutFormat: "SERIES" as const,
+                }
+              : { swissRounds: LEAGUE_EVENT.swissRounds, cutSize: LEAGUE_EVENT.cutSize }),
           })),
         },
       },
@@ -86,8 +94,10 @@ const eventSetupInput = z.object({
     .optional(),
   venue: z.string().trim().max(120, "Venue must be at most 120 characters.").optional(),
   notes: z.string().trim().max(1000, "Notes must be at most 1000 characters.").optional(),
-  /** Season finale (double points, season-seeded cut); locked once the event starts. */
+  /** Season finale (double league points); locked once the event starts. */
   finale: z.boolean().optional(),
+  /** How cut matches are played; locked once the event starts. Omitted = unchanged. */
+  cutFormat: z.enum(["SINGLE", "SERIES"]).optional(),
 });
 
 const orNull = (v: string | undefined) => (v === undefined ? undefined : v === "" ? null : v);
@@ -112,7 +122,8 @@ export async function updateEventSetup(
     v.matchFormat !== event.matchFormat ||
     v.swissRounds !== event.swissRounds ||
     v.cutSize !== event.cutSize ||
-    (v.finale !== undefined && v.finale !== event.finale);
+    (v.finale !== undefined && v.finale !== event.finale) ||
+    (v.cutFormat !== undefined && v.cutFormat !== event.cutFormat);
   if (formatChanged && event.status !== "SIGNUP") {
     return { ok: false, error: "Format, Swiss rounds and cut size can only change before the event starts." };
   }
@@ -127,6 +138,7 @@ export async function updateEventSetup(
     venue: event.venue,
     notes: event.notes,
     finale: event.finale,
+    cutFormat: event.cutFormat,
   };
   const after = { ...v };
   await db.$transaction(async (tx) => {
@@ -143,6 +155,7 @@ export async function updateEventSetup(
         venue: orNull(v.venue),
         notes: orNull(v.notes),
         ...(v.finale !== undefined ? { finale: v.finale } : {}),
+        ...(v.cutFormat !== undefined ? { cutFormat: v.cutFormat } : {}),
         version: { increment: 1 },
       },
     });
