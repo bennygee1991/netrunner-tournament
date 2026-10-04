@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Notice } from "@/components/notice";
 import { Badge, Card, FormMessage, PageTitle, buttonStyles } from "@/components/ui";
 import { requireAdmin } from "@/lib/auth/server";
 import { db } from "@/lib/db";
@@ -46,6 +47,7 @@ export default async function AdminPlayersPage({ searchParams }: PageProps<"/adm
   return (
     <>
       <PageTitle kicker="organizer">Players</PageTitle>
+      <Notice code={sp.notice} />
       <form role="search" className="mb-4 flex gap-2">
         <label htmlFor="q" className="sr-only">
           Search runner names
