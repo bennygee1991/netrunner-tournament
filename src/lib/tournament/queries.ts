@@ -13,6 +13,8 @@ import {
   standings,
 } from "@/engine";
 import type { PrismaClient } from "@/generated/prisma/client";
+import type { Clock } from "../clock";
+import { type ClockView, clockView } from "./clock-ops";
 import { todayIso, toIsoDate } from "./dates";
 import { type MatchReports, matchKey, pendingReports } from "./reports";
 import { readPrizes } from "./season";
@@ -81,6 +83,8 @@ export interface MatchView {
     pickerId: string;
     decider: boolean;
     winnerId: string | null;
+    /** Game 3 clock (started by the organizer when the decider begins). */
+    deciderClock: Clock | null;
   } | null;
   /** Player reports waiting for the organizer (open games only). */
   reports: MatchReports | null;
@@ -127,6 +131,8 @@ export interface EventView {
   entrants: LoadedEvent["entrants"];
   /** Sign-ups not yet approved. */
   pending: { userId: string; runnerName: string; at: Date }[];
+  /** The running round's clock (null when no round is being played). */
+  clock: ClockView | null;
   /** Number of games whose player reports agree and can be approved in one go. */
   agreedReports: number;
 }
@@ -143,6 +149,7 @@ export async function getEventView(db: PrismaClient, eventId: string): Promise<E
   const player = (id: string) => ({ id, name: nameOf(id) });
   const reports = await pendingReports(db, loaded);
   const series = state.cutFormat === "series";
+  const clock = clockView(state, row.clockJson);
   const seedMap = state.cut.length ? cutSeeds(state, nameOf) : new Map<string, number>();
   const roundViews = (rounds: typeof state.rounds, phase: "swiss" | "cut"): RoundView[] =>
     rounds.map((r, i) => ({
@@ -164,6 +171,7 @@ export async function getEventView(db: PrismaClient, eventId: string): Promise<E
                 pickerId: cutHigherSeed(m, seedMap),
                 decider: needsDecider(m),
                 winnerId: cutWinner(m, seedMap, "series"),
+                deciderClock: i === state.cut.length - 1 ? (clock?.deciders[String(j)] ?? null) : null,
               }
             : null,
         reports: reports.get(matchKey(phase, i, j)) ?? null,
@@ -214,6 +222,7 @@ export async function getEventView(db: PrismaClient, eventId: string): Promise<E
     cut: roundViews(state.cut, "cut"),
     seeds: state.cut.length ? cutSeeds(state, nameOf) : new Map(),
     entrants: loaded.entrants,
+    clock,
     agreedReports: [...reports.values()].reduce(
       (t, r) => t + Object.values(r.status).filter((s) => s && s !== "conflict").length,
       0,

@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_ROUNDS, EVENT_POINTS, FINALE, GAME_POINTS, BADGES, byePoints } from "@/engine";
+import {
+  DEFAULT_ROUNDS,
+  EVENT_POINTS,
+  FINALE,
+  GAME_POINTS,
+  BADGES,
+  ROUND_MINUTES,
+  byePoints,
+} from "@/engine";
 import { rulesContent } from "./rules-content";
 
 const text = rulesContent()
@@ -24,6 +32,12 @@ describe("Rules page stays in sync with the engine", () => {
     expect(text).toContain(
       `double-sided ${DEFAULT_ROUNDS.double.below} (${DEFAULT_ROUNDS.double.atOrAbove} with ${DEFAULT_ROUNDS.double.threshold}+ players)`,
     );
+  });
+
+  it("states the round clock limits from the engine", () => {
+    expect(text).toContain(`${ROUND_MINUTES.single} minutes for a single-sided Swiss round`);
+    expect(text).toContain(`${ROUND_MINUTES.double} minutes for a double-sided round`);
+    expect(text).toContain(`own ${ROUND_MINUTES.cutDecider} minutes`);
   });
 
   it("states the season finale rules from the engine", () => {

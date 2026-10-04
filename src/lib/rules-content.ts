@@ -5,6 +5,7 @@ import {
   EVENT_POINTS,
   FINALE,
   LEAGUE_EVENT,
+  ROUND_MINUTES,
   GAME_POINTS,
   SEASON,
   SWISS_ROUNDS_MAX,
@@ -133,7 +134,9 @@ export function rulesContent(): RulesSection[] {
       blocks: [
         {
           items: [
-            "Single-sided rounds: about 40-45 minutes. Double-sided: 65-70.",
+            `Round clock: ${ROUND_MINUTES.single} minutes for a single-sided Swiss round, ${ROUND_MINUTES.double} minutes for a double-sided round.`,
+            `Top cut: each match gets ${ROUND_MINUTES.cutMatch} minutes for games 1 and 2, and a deciding game 3 gets its own ${ROUND_MINUTES.cutDecider} minutes. A single-game cut match gets ${ROUND_MINUTES.cutSingle} minutes.`,
+            "The organizer starts the clock once everyone is seated, and can pause it or add time. The countdown shows on the event page and in the flowchart.",
             "When time is called, the active player finishes their turn, then the other player takes a final turn. Most agenda points wins; equal means a tie.",
             "Intentional draws are allowed if both players tell the organizer within 5 minutes of the round starting. It scores as a tie.",
           ],

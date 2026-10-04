@@ -9,6 +9,7 @@ import { FinaleBanner } from "@/components/tournament/finale-banner";
 import { SubmitButton } from "@/components/submit-button";
 import { MatchCard } from "@/components/tournament/match-card";
 import { ResultEntry } from "@/components/tournament/result-entry";
+import { ClockControls, RoundClock } from "@/components/tournament/round-clock";
 import { ResultsTable } from "@/components/tournament/results-table";
 import { StandingsTable } from "@/components/tournament/standings-table";
 import { EventStatusBadge, formatLine } from "@/components/tournament/status-badge";
@@ -19,6 +20,7 @@ import { toIsoDate } from "@/lib/tournament/dates";
 import { type EventView, getEventView } from "@/lib/tournament/queries";
 import {
   addPlayerAction,
+  clockAction,
   deleteOneOffAction,
   pickSidesAction,
   approveAction,
@@ -95,11 +97,32 @@ function NextStepCard({ view }: { view: EventView }) {
       );
       break;
     case "done":
-      content = <p className="text-sm text-ok">Event finished. Points are on the leaderboards.</p>;
+      content = (
+        <p className="text-sm text-ok">
+          {meta.oneOff
+            ? "Event finished. Results and trophies are on the players' profiles."
+            : "Event finished. Points are on the leaderboards."}
+        </p>
+      );
   }
   return (
     <Card tone="magenta">
       <CardTitle>Next step</CardTitle>
+      {view.clock && (
+        <div className="mb-4">
+          <RoundClock label={view.clock.label} clock={view.clock.main} limitMin={view.clock.limitMin} />
+          <ClockControls
+            action={clockAction}
+            eventId={meta.id}
+            target="round"
+            clock={view.clock.main}
+            label={view.clock.label}
+          />
+          <p className="mt-1 text-xs text-muted">
+            Start the clock once everyone is seated. Players see it on the event page.
+          </p>
+        </div>
+      )}
       {view.agreedReports > 0 && (
         <ActionForm action={approveReportsAction} fields={fields} className="mb-4">
           <p className="mb-2 text-sm">
@@ -136,6 +159,7 @@ function Rounds({ view, repair }: { view: EventView; repair: boolean }) {
                     key={m.index}
                     action={resultAction}
                     sidesAction={pickSidesAction}
+                    clockAction={clockAction}
                     eventId={view.meta.id}
                     phase="cut"
                     round={r.index}

@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { cx } from "@/components/ui";
+import { ROUND_MINUTES } from "@/engine";
+import type { ClockView } from "@/lib/tournament/clock-ops";
 import type { MatchView, RoundView } from "@/lib/tournament/queries";
+import { RoundClock } from "./round-clock";
 
 type Game = "A" | "B" | "D" | null;
 
@@ -164,6 +167,7 @@ export function TournamentChart({
   pointsAfter,
   standings,
   cutSize,
+  clock = null,
 }: {
   swiss: RoundView[];
   cut: RoundView[];
@@ -172,6 +176,8 @@ export function TournamentChart({
   pointsAfter: Record<string, number>[];
   standings: ChartStanding[];
   cutSize: number;
+  /** The running round's clock, shown on top and in that round's column. */
+  clock?: ClockView | null;
 }) {
   const [focus, setFocus] = useState<string | null>(null);
   const toggle = (id: string) => setFocus((f) => (f === id ? null : id));
@@ -180,8 +186,11 @@ export function TournamentChart({
     (standings.find((s) => s.id === focus)?.name ??
       swiss.flatMap((r) => r.matches).find((m) => m.a.id === focus)?.a.name);
 
+  const liveSwiss = clock && cut.length === 0 ? swiss.length - 1 : -1;
+  const liveCut = clock && cut.length > 0 ? cut.length - 1 : -1;
   return (
     <div>
+      {clock && <RoundClock label={clock.label} clock={clock.main} limitMin={clock.limitMin} />}
       <p className="mb-2 text-xs text-muted" aria-live="polite">
         {focusName ? (
           <>
@@ -207,6 +216,11 @@ export function TournamentChart({
                 {r.label}
                 {!r.complete && <span className="text-muted"> · live</span>}
               </h3>
+              {ri === liveSwiss && clock && (
+                <div className="mb-2">
+                  <RoundClock label={clock.label} clock={clock.main} limitMin={clock.limitMin} compact />
+                </div>
+              )}
               <ol className="space-y-2">
                 {r.matches.map((m) => (
                   <li key={m.index}>
@@ -260,6 +274,11 @@ export function TournamentChart({
           {cut.map((r, ci) => (
             <section key={`c${r.index}`} className="flex w-52 shrink-0 flex-col" aria-label={r.label}>
               <h3 className="mb-2 font-mono text-xs tracking-widest text-warn uppercase">{r.label}</h3>
+              {ci === liveCut && clock && (
+                <div className="mb-2">
+                  <RoundClock label={clock.label} clock={clock.main} limitMin={clock.limitMin} compact />
+                </div>
+              )}
               <ol className="flex flex-1 flex-col justify-around gap-2">
                 {r.matches.map((m) => (
                   <li key={m.index} className="relative">
@@ -270,6 +289,16 @@ export function TournamentChart({
                       onFocus={toggle}
                       label={`Match ${m.index + 1}`}
                     />
+                    {m.series?.decider && m.series.g3 === null && m.series.deciderClock && (
+                      <div className="mt-1">
+                        <RoundClock
+                          label={`Match ${m.index + 1} game 3`}
+                          clock={m.series.deciderClock}
+                          limitMin={ROUND_MINUTES.cutDecider}
+                          compact
+                        />
+                      </div>
+                    )}
                     {ci < cut.length - 1 && (
                       // Connector towards the next cut round.
                       <span aria-hidden className="absolute top-1/2 -right-6 h-px w-6 bg-border" />

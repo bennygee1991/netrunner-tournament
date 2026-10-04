@@ -27,6 +27,7 @@ import {
   removeEntrant,
 } from "@/lib/tournament/registration";
 import { opApproveAgreedReports } from "@/lib/tournament/reports";
+import { opClock } from "@/lib/tournament/clock-ops";
 import { deleteOneOffEvent } from "@/lib/tournament/one-off";
 import { cryptoRng } from "@/lib/tournament/rng";
 import { updateEventSetup } from "@/lib/tournament/season";
@@ -211,4 +212,17 @@ export async function deleteOneOffAction(_p: FormState, form: FormData): Promise
   revalidatePath("/admin/events");
   revalidatePath("/");
   redirect("/admin/events?notice=event-deleted");
+}
+
+export async function clockAction(_p: FormState, form: FormData): Promise<FormState> {
+  const actor = await adminActor();
+  const eventId = str(form, "eventId");
+  const res = await opClock(db, actor, eventId, {
+    target: str(form, "target"),
+    match: str(form, "match") || undefined,
+    op: str(form, "op"),
+  });
+  if (!res.ok) return { error: res.error };
+  refresh(eventId);
+  return {};
 }

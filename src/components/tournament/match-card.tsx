@@ -1,4 +1,5 @@
-import { byePoints } from "@/engine";
+import { ROUND_MINUTES, byePoints } from "@/engine";
+import { RoundClock } from "./round-clock";
 import { cx } from "@/components/ui";
 import type { MatchView } from "@/lib/tournament/queries";
 
@@ -112,6 +113,14 @@ export function MatchCard({ match, double, table }: { match: MatchView; double: 
                 <p className="font-mono text-[11px] text-warn uppercase">
                   Game 3 · decider · coin flip sides
                 </p>
+                {s.g3 === null && s.deciderClock && (
+                  <RoundClock
+                    label="Game 3 clock"
+                    clock={s.deciderClock}
+                    limitMin={ROUND_MINUTES.cutDecider}
+                    compact
+                  />
+                )}
                 <GameLine
                   a={match.a.name}
                   b={match.b.name}

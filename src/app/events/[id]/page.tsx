@@ -9,6 +9,7 @@ import { myOpenMatch } from "@/lib/tournament/my-match";
 import { FinaleBanner } from "@/components/tournament/finale-banner";
 import { ResultsTable } from "@/components/tournament/results-table";
 import { SignupButton } from "@/components/tournament/signup-button";
+import { RoundClock } from "@/components/tournament/round-clock";
 import { TournamentChart } from "@/components/tournament/tournament-chart";
 import { StandingsTable } from "@/components/tournament/standings-table";
 import { EventStatusBadge, formatLine } from "@/components/tournament/status-badge";
@@ -190,11 +191,15 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
                 inCut: standingsCut > 0 && s.rank <= standingsCut,
               }))}
               cutSize={standingsCut}
+              clock={view.clock}
             />
           </Card>
         </>
       ) : (
         <>
+          {view.clock && (
+            <RoundClock label={view.clock.label} clock={view.clock.main} limitMin={view.clock.limitMin} />
+          )}
           {view.cut.length > 0 && (
             <Card tone="warn">
               <CardTitle>Top cut</CardTitle>

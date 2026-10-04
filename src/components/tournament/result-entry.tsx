@@ -1,6 +1,8 @@
 "use client";
 
 import { ActionForm } from "@/components/action-form";
+import { ClockControls, RoundClock } from "@/components/tournament/round-clock";
+import { ROUND_MINUTES } from "@/engine";
 import { cx } from "@/components/ui";
 import type { FormState } from "@/lib/forms/state";
 import type { MatchView } from "@/lib/tournament/queries";
@@ -118,6 +120,7 @@ export function SidePicker({
 export function ResultEntry({
   action,
   sidesAction,
+  clockAction,
   eventId,
   phase,
   round,
@@ -127,6 +130,8 @@ export function ResultEntry({
   action: (s: FormState, f: FormData) => Promise<FormState>;
   /** Series cut matches: sets sides for game 1. */
   sidesAction?: (s: FormState, f: FormData) => Promise<FormState>;
+  /** Series cut matches: game 3 clock controls. */
+  clockAction?: (s: FormState, f: FormData) => Promise<FormState>;
   eventId: string;
   phase: "swiss" | "cut";
   round: number;
@@ -134,7 +139,7 @@ export function ResultEntry({
   double: boolean;
 }) {
   if (!match.b) return null;
-  if (match.series) return <SeriesEntry {...{ action, sidesAction, eventId, round, match }} />;
+  if (match.series) return <SeriesEntry {...{ action, sidesAction, clockAction, eventId, round, match }} />;
   const corpIsA = match.corpId === null ? null : match.corpId === match.a.id;
   const base = { eventId, phase, round, match: match.index, a: match.a.id, b: match.b.id };
   const tieLabel = phase === "cut" ? "Tie*" : "Tie";
@@ -184,12 +189,14 @@ export function ResultEntry({
 function SeriesEntry({
   action,
   sidesAction,
+  clockAction,
   eventId,
   round,
   match,
 }: {
   action: (s: FormState, f: FormData) => Promise<FormState>;
   sidesAction?: (s: FormState, f: FormData) => Promise<FormState>;
+  clockAction?: (s: FormState, f: FormData) => Promise<FormState>;
   eventId: string;
   round: number;
   match: MatchView;
@@ -247,6 +254,26 @@ function SeriesEntry({
               <p className="font-mono text-[11px] tracking-widest text-warn uppercase">
                 Game 3 · decider · sides by coin flip
               </p>
+              {s.g3 === null && (
+                <>
+                  <RoundClock
+                    label="Game 3 clock"
+                    clock={s.deciderClock}
+                    limitMin={ROUND_MINUTES.cutDecider}
+                    compact
+                  />
+                  {clockAction && (
+                    <ClockControls
+                      action={clockAction}
+                      eventId={eventId}
+                      target="decider"
+                      match={match.index}
+                      clock={s.deciderClock}
+                      label={`Match ${match.index + 1} game 3 clock`}
+                    />
+                  )}
+                </>
+              )}
               <ActionForm action={action} fields={{ ...base, game: 3 }} showMessage={false}>
                 <Buttons
                   match={match}
