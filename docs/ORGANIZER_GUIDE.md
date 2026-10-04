@@ -29,6 +29,13 @@ Open the event from **Admin → Season**. Under **Event setup** you can set:
 
 Format, rounds and cut lock once the event starts.
 
+### The season finale
+
+The last event of each season is created as the **Season finale**: 1 Swiss round, then a top 8
+cut. Players get into the cut by their **Season leaderboard** position, not the Swiss round, and
+are seeded in that order (ties broken by the finale's Swiss round). The event page shows a
+**Cut qualification** table while it runs. League points from the finale count double.
+
 ## 3. Sign-ups
 
 - Players sign up on the home page, after creating an account with their runner name.

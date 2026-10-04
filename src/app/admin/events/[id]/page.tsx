@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { ActionForm } from "@/components/action-form";
 import { ConfirmSubmit } from "@/components/confirm-submit";
 import { Notice } from "@/components/notice";
+import { FinaleBanner, SeasonSeeding } from "@/components/tournament/season-seeding";
 import { SubmitButton } from "@/components/submit-button";
 import { MatchCard } from "@/components/tournament/match-card";
 import { ResultEntry } from "@/components/tournament/result-entry";
@@ -389,12 +390,14 @@ export default async function AdminEventPage({ params, searchParams }: PageProps
         <EventStatusBadge status={meta.status} round={view.swiss.length} />
         <span>{eventWhen(meta)}</span>
         <span>Month {meta.month}</span>
-        <span>{formatLine(meta.matchFormat, meta.cutSize)}</span>
+        <span>{formatLine(meta.matchFormat, meta.cutSize, meta.finale)}</span>
         <Link href={`/events/${meta.id}`} className={buttonStyles.link}>
           Public page
         </Link>
       </div>
 
+      {meta.finale && <FinaleBanner />}
+      {view.seasonSeeding && <SeasonSeeding rows={view.seasonSeeding} fixed={view.cut.length > 0} />}
       <Notice code={sp.notice} />
       <NextStepCard view={view} />
       <Rounds view={view} repair={repair} />
@@ -412,7 +415,7 @@ export default async function AdminEventPage({ params, searchParams }: PageProps
           <StandingsTable
             standings={view.standings}
             nameOf={view.loaded.nameOf}
-            cutSize={meta.cutSize}
+            cutSize={meta.finale ? 0 : meta.cutSize}
             double={double}
             dropped={new Set(view.loaded.state.dropped)}
           />
@@ -436,6 +439,7 @@ export default async function AdminEventPage({ params, searchParams }: PageProps
             startTime: meta.startTime ?? "",
             venue: meta.venue ?? "",
             notes: meta.notes ?? "",
+            finale: meta.finale,
           }}
           locked={meta.status !== "SIGNUP"}
           autoRounds={meta.effectiveSwissRounds}

@@ -58,6 +58,7 @@ export async function setupAction(_p: FormState, form: FormData): Promise<FormSt
     startTime: str(form, "startTime"),
     venue: str(form, "venue"),
     notes: str(form, "notes"),
+    finale: form.get("finale") === "on",
   };
   const res = await updateEventSetup(db, actor, eventId, input);
   return finish(eventId, res, "Event saved.");

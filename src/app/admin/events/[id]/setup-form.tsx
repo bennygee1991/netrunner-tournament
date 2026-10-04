@@ -24,6 +24,7 @@ export function SetupForm({
     startTime: string;
     venue: string;
     notes: string;
+    finale: boolean;
   };
   locked: boolean;
   autoRounds: number;
@@ -58,6 +59,7 @@ export function SetupForm({
           <input type="hidden" name="matchFormat" value={event.matchFormat} />
           <input type="hidden" name="swissRounds" value={event.swissRounds ?? ""} />
           <input type="hidden" name="cutSize" value={event.cutSize} />
+          <input type="hidden" name="finale" value={event.finale ? "on" : ""} />
           <p className="mb-4 text-sm text-muted">
             Format, Swiss rounds and cut size are locked once the event starts.
           </p>
@@ -107,6 +109,21 @@ export function SetupForm({
             </select>
             {fe.cutSize && <p className="text-sm text-danger">{fe.cutSize}</p>}
           </div>
+          <label className="mb-4 flex min-h-11 items-start gap-3">
+            <input
+              type="checkbox"
+              name="finale"
+              defaultChecked={event.finale}
+              className="mt-1 size-5 accent-warn"
+            />
+            <span>
+              Season finale
+              <span className="block text-xs text-muted">
+                Double league points, and the top cut is seeded from the Season leaderboard (usually 1 Swiss
+                round, top 8).
+              </span>
+            </span>
+          </label>
         </>
       )}
       <Field

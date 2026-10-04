@@ -35,7 +35,9 @@ export default async function EventsPage() {
                     {eventWhen(e)} · Month {e.month} ·{" "}
                     {e.status === "SIGNUP" ? `${e._count.signups} signed up` : `${e._count.entrants} players`}
                   </p>
-                  <p className="font-mono text-xs text-muted">{formatLine(e.matchFormat, e.cutSize)}</p>
+                  <p className="font-mono text-xs text-muted">
+                    {formatLine(e.matchFormat, e.cutSize, e.finale)}
+                  </p>
                 </div>
                 <EventStatusBadge status={e.status} />
               </Link>

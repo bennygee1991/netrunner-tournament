@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_ROUNDS, EVENT_POINTS, GAME_POINTS, MILESTONES, byePoints } from "@/engine";
+import { DEFAULT_ROUNDS, EVENT_POINTS, FINALE, GAME_POINTS, MILESTONES, byePoints } from "@/engine";
 import { rulesContent } from "./rules-content";
 
 const text = rulesContent()
@@ -24,6 +24,14 @@ describe("Rules page stays in sync with the engine", () => {
     expect(text).toContain(
       `double-sided ${DEFAULT_ROUNDS.double.below} (${DEFAULT_ROUNDS.double.atOrAbove} with ${DEFAULT_ROUNDS.double.threshold}+ players)`,
     );
+  });
+
+  it("states the season finale rules from the engine", () => {
+    expect(text).toContain(
+      `×${FINALE.pointsMultiplier} league points: champion ${EVENT_POINTS.champion * FINALE.pointsMultiplier}`,
+    );
+    expect(text).toContain(`plays ${FINALE.swissRounds} Swiss round, then a top ${FINALE.cutSize} cut`);
+    expect(text).toContain("decided by the Season leaderboard");
   });
 
   it("covers every rule area the engine implements", () => {

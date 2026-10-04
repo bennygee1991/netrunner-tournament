@@ -48,6 +48,8 @@ export function eventResults(ev: EventState, nameOf: NameOf): Map<string, EventR
       if (s.rank === 1) r.label = "Champion";
     }
   }
+  const multiplier = ev.pointsMultiplier ?? 1;
+  if (multiplier !== 1) for (const r of out.values()) r.points *= multiplier;
   return out;
 }
 

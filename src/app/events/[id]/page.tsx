@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { LiveRefresh } from "@/components/live-refresh";
 import { MatchCard } from "@/components/tournament/match-card";
+import { FinaleBanner, SeasonSeeding } from "@/components/tournament/season-seeding";
 import { ResultsTable } from "@/components/tournament/results-table";
 import { SignupButton } from "@/components/tournament/signup-button";
 import { StandingsTable } from "@/components/tournament/standings-table";
@@ -45,10 +46,12 @@ export default async function EventPage({ params }: PageProps<"/events/[id]">) {
         )}
       </div>
       <p className="mb-4 font-mono text-xs text-muted">
-        {formatLine(meta.matchFormat, meta.cutSize)}
+        {formatLine(meta.matchFormat, meta.cutSize, meta.finale)}
         {meta.cutSize === 8 &&
           " · single elimination (house rule; official top 8 cuts are double elimination)"}
       </p>
+
+      {meta.finale && <FinaleBanner />}
 
       {meta.notes && (
         <Card>
@@ -134,6 +137,8 @@ export default async function EventPage({ params }: PageProps<"/events/[id]">) {
           ))}
         </Card>
       )}
+
+      {view.seasonSeeding && <SeasonSeeding rows={view.seasonSeeding} fixed={view.cut.length > 0} />}
 
       {view.standings.length > 0 && (
         <Card>

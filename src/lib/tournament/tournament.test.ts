@@ -58,7 +58,7 @@ describe.skipIf(!hasTestDb)("tournament services (database)", () => {
         ["Event 1", "2026-10-10", 1, "SIGNUP", 4],
         ["Event 2", "2026-10-24", 1, "SIGNUP", 4],
         ["Event 3", "2026-11-07", 2, "SIGNUP", 4],
-        ["Event 4", "2026-11-21", 2, "SIGNUP", 4],
+        ["Season finale", "2026-11-21", 2, "SIGNUP", 8],
       ]);
       expect(await db.auditLog.count({ where: { action: "season.create" } })).toBe(1);
     });

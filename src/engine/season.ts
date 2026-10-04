@@ -9,6 +9,8 @@ export interface PlannedEvent {
   /** YYYY-MM-DD */
   date: string;
   month: 1 | 2;
+  /** The last event of the season is the finale. */
+  finale: boolean;
 }
 
 /** Adds days to a YYYY-MM-DD date (calendar arithmetic, no time zone involved). */
@@ -25,6 +27,7 @@ export function planSeason(firstEventDate: string): PlannedEvent[] {
     name: `Event ${i + 1}`,
     date: addDays(firstEventDate, SEASON.daysBetweenEvents * i),
     month: i < SEASON.eventsPerMonth ? 1 : 2,
+    finale: i === SEASON.events - 1,
   }));
 }
 
@@ -113,4 +116,29 @@ export function milestoneTrophies(record: {
   if (record.eventsPlayed >= MILESTONES.tenEvents.count) out.push(MILESTONES.tenEvents.key);
   if (record.undefeatedSwissRuns >= 1) out.push(MILESTONES.undefeatedSwiss.key);
   return out;
+}
+
+export interface SeasonStanding {
+  /** Season board total so far and event wins. */
+  total: number;
+  titles: number;
+}
+
+/**
+ * Season finale seeding: entrants ordered by season points (then event wins), ties broken by the
+ * finale's Swiss standings. Entrants with no season points come last, in Swiss order.
+ */
+export function finaleSeedOrder(
+  ev: EventState,
+  nameOf: NameOf,
+  seasonOf: (entrantId: string) => SeasonStanding | undefined,
+): string[] {
+  const swissRank = new Map(standings(ev, nameOf).map((s) => [s.id, s.rank]));
+  return [...ev.entrants].sort((a, b) => {
+    const sa = seasonOf(a) ?? { total: 0, titles: 0 };
+    const sb = seasonOf(b) ?? { total: 0, titles: 0 };
+    return (
+      sb.total - sa.total || sb.titles - sa.titles || (swissRank.get(a) ?? 1e9) - (swissRank.get(b) ?? 1e9)
+    );
+  });
 }

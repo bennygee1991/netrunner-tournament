@@ -41,7 +41,7 @@ export default async function AdminSeasonPage({ searchParams }: PageProps<"/admi
                 <div className="min-w-0 flex-1">
                   <p className="text-lg font-semibold">{e.name}</p>
                   <p className="font-mono text-xs text-muted">
-                    {formatDay(e.date)} · Month {e.month} · {formatLine(e.matchFormat, e.cutSize)}
+                    {formatDay(e.date)} · Month {e.month} · {formatLine(e.matchFormat, e.cutSize, e.finale)}
                   </p>
                   <p className="font-mono text-xs text-muted">
                     {e._count.entrants} entrants · {e._count.signups} sign-ups

@@ -26,10 +26,10 @@ const swiss = (id: string, month: 1 | 2, winner: string, loser: string): EventSt
 describe("season plan", () => {
   it("creates 4 events two weeks apart; events 1-2 are Month 1, 3-4 Month 2", () => {
     expect(planSeason("2026-10-10")).toEqual([
-      { index: 1, name: "Event 1", date: "2026-10-10", month: 1 },
-      { index: 2, name: "Event 2", date: "2026-10-24", month: 1 },
-      { index: 3, name: "Event 3", date: "2026-11-07", month: 2 },
-      { index: 4, name: "Event 4", date: "2026-11-21", month: 2 },
+      { index: 1, name: "Event 1", date: "2026-10-10", month: 1, finale: false },
+      { index: 2, name: "Event 2", date: "2026-10-24", month: 1, finale: false },
+      { index: 3, name: "Event 3", date: "2026-11-07", month: 2, finale: false },
+      { index: 4, name: "Event 4", date: "2026-11-21", month: 2, finale: true },
     ]);
   });
 

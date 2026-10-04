@@ -35,7 +35,7 @@ test("admin creates a season with 4 events", async ({ page }) => {
   await page.getByRole("button", { name: "Create season" }).click();
   await expect(page.getByRole("heading", { name: "E2E Season" })).toBeVisible();
   await expect(page.getByRole("link", { name: /Event 1/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: /Event 4/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Season finale/ })).toBeVisible();
 });
 
 test("visitors see the next event and a register call to action", async ({ page }) => {
@@ -85,7 +85,7 @@ test("admin approves sign-ups, adds walk-ins and sets up the event", async ({ pa
   await page.getByLabel("Venue (optional)").fill("The Hive Game Store");
   await page.getByLabel("Notes for players (optional)").fill("Bring sleeves. Entry is free.");
   await page.getByLabel("Swiss rounds").fill("2");
-  await page.getByLabel("Top cut").selectOption("4");
+  await page.getByLabel("Top cut", { exact: true }).selectOption("4");
   await page.getByRole("button", { name: "Save event" }).click();
   await expect(page.getByText("Event saved.")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Kickoff Clash" })).toBeVisible();

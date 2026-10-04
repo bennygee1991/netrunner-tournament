@@ -1,5 +1,5 @@
-import type { EventState, GameResult, NameOf, Round } from "@/engine";
-import type { Prisma, PrismaClient } from "@/generated/prisma/client";
+import { type EventState, FINALE, type GameResult, type NameOf, type Round } from "@/engine";
+import { Prisma, type PrismaClient } from "@/generated/prisma/client";
 import { ConflictError, ServiceError } from "./errors";
 
 export type Db = PrismaClient | Prisma.TransactionClient;
@@ -24,6 +24,7 @@ export interface LoadedEvent {
     index: number;
     seasonId: string;
     seasonName: string;
+    finale: boolean;
   };
 }
 
@@ -76,6 +77,9 @@ export function toLoaded(row: EventRow): LoadedEvent {
     rounds: row.rounds.filter((r) => r.phase === "SWISS").map(toRound),
     cut: row.rounds.filter((r) => r.phase === "CUT").map(toRound),
   };
+  if (row.finale) state.pointsMultiplier = FINALE.pointsMultiplier;
+  if (Array.isArray(row.cutSeedOrder))
+    state.cutSeedOrder = row.cutSeedOrder.filter((x): x is string => typeof x === "string");
   return {
     state,
     version: row.version,
@@ -88,6 +92,7 @@ export function toLoaded(row: EventRow): LoadedEvent {
       index: row.index,
       seasonId: row.seasonId,
       seasonName: row.season.name,
+      finale: row.finale,
     },
   };
 }
@@ -114,6 +119,7 @@ export async function saveEvent(
       status: STATUS_TO_DB[state.status],
       swissRounds: state.swissRounds,
       cutSize: state.cutSize,
+      cutSeedOrder: state.cutSeedOrder ?? Prisma.DbNull,
       version: { increment: 1 },
     },
   });

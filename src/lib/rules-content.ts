@@ -2,6 +2,7 @@ import {
   CUT_SIZES,
   DEFAULT_ROUNDS,
   EVENT_POINTS,
+  FINALE,
   GAME_POINTS,
   MILESTONES,
   SEASON,
@@ -103,6 +104,21 @@ export function rulesContent(): RulesSection[] {
       ],
     },
     {
+      id: "finale",
+      title: "Season finale",
+      tone: "warn",
+      blocks: [
+        {
+          items: [
+            `The last event of the season plays ${FINALE.swissRounds} Swiss round, then a top ${FINALE.cutSize} cut.`,
+            `The cut is decided by the Season leaderboard, not the Swiss round: the top ${FINALE.cutSize} entrants by season points (then event wins) qualify and are seeded in that order. Ties on both are broken by the finale's Swiss standings.`,
+            "Entrants with no season points can still qualify if there are free places, in Swiss order.",
+            `League points from the finale are doubled (×${FINALE.pointsMultiplier}).`,
+          ],
+        },
+      ],
+    },
+    {
       id: "time",
       title: "Rounds and time",
       tone: "cyan",
@@ -127,6 +143,7 @@ export function rulesContent(): RulesSection[] {
             "Events without a cut use the final Swiss rank with the same table.",
             `A season is ${SEASON.events} events, one every ${SEASON.daysBetweenEvents / 7} weeks. Events 1-${SEASON.eventsPerMonth} feed the Month 1 board, the rest feed Month 2, and all of them feed the Season board.`,
             "Boards are sorted by points, then event wins, then name. Players level on both share a place.",
+            `The season finale (the last event) is worth ×${FINALE.pointsMultiplier} league points: champion ${EVENT_POINTS.champion * FINALE.pointsMultiplier} · finalist ${EVENT_POINTS.finalist * FINALE.pointsMultiplier} · top 4 ${EVENT_POINTS.top4 * FINALE.pointsMultiplier} · top 8 ${EVENT_POINTS.top8 * FINALE.pointsMultiplier} · entered ${EVENT_POINTS.played * FINALE.pointsMultiplier}. This counts on the Month 2 and Season boards.`,
             "At the end of the season: prizes for the top of each board, then the boards move to Past seasons and everything resets.",
           ],
         },
