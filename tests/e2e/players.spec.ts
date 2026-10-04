@@ -38,3 +38,22 @@ test("the hall of champions lists event champions and milestones", async ({ page
   await page.getByRole("link", { name: "Hall of champions" }).click();
   await expect(page).toHaveURL("/trophies");
 });
+
+test("bios are public but emails never appear on public pages", async ({ page }) => {
+  const name = uniqueName("Bio");
+  const email = `${name.toLowerCase().replace(/[^a-z0-9]/g, "")}@example.com`;
+  const bio = "Shaper main. Will trade Sure Gamble for snacks.";
+  await register(page, name);
+  await page.getByLabel("Email (optional)").fill(email);
+  await page.getByLabel("Bio (public, optional)").fill(bio);
+  await page.getByRole("button", { name: "Save profile" }).click();
+  await expect(page.getByText("Saved.")).toBeVisible();
+
+  for (const path of [`/players?q=${encodeURIComponent(name)}`, `/players/${encodeURIComponent(name)}`]) {
+    await page.goto(path);
+    await expect(page.getByText(bio)).toBeVisible();
+    expect(await page.content(), `${path} leaks the email`).not.toContain(email);
+  }
+  await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Trophy cabinet/i })).toBeVisible();
+});

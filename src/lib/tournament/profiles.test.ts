@@ -91,6 +91,9 @@ describe.skipIf(!hasTestDb)("leaderboards and profiles (database)", () => {
 
     const profile = (await getProfile(db, "KATE"))!;
     expect(profile.user.id).toBe(kate.id);
+    // Public profile: never emails or password hashes.
+    expect(profile.user).not.toHaveProperty("email");
+    expect(profile.user).not.toHaveProperty("passwordHash");
     expect(profile.stats).toMatchObject({ events: 2, titles: 1 });
     expect(profile.standing).toMatchObject({ seasonName: "S", total: kateSeason.total });
     expect(profile.cabinet.map((t) => t.kind)).toEqual(

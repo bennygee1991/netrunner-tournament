@@ -66,7 +66,7 @@ export default async function PlayersPage({ searchParams }: PageProps<"/players"
             <li key={p.id}>
               <Link
                 href={`/players/${encodeURIComponent(p.runnerName)}`}
-                className="flex items-center gap-3 rounded border border-border bg-surface p-3 hover:border-cyan"
+                className="flex h-full items-center gap-3 rounded border border-border bg-surface p-3 hover:border-cyan"
               >
                 <Avatar avatar={p.avatar} seed={p.id} size={48} />
                 <span className="min-w-0 flex-1">
@@ -78,6 +78,7 @@ export default async function PlayersPage({ searchParams }: PageProps<"/players"
                     {p.trophies === 1 ? "y" : "ies"}
                     {p.titles > 0 && ` · ${p.titles} win${p.titles === 1 ? "" : "s"}`}
                   </span>
+                  {p.bio && <span className="mt-1 line-clamp-2 block text-sm text-muted">{p.bio}</span>}
                 </span>
               </Link>
             </li>
