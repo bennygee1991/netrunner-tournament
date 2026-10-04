@@ -1,10 +1,10 @@
 import {
+  BADGES,
   CUT_SIZES,
   DEFAULT_ROUNDS,
   EVENT_POINTS,
   FINALE,
   GAME_POINTS,
-  MILESTONES,
   SEASON,
   SWISS_ROUNDS_MAX,
   byePoints,
@@ -151,14 +151,24 @@ export function rulesContent(): RulesSection[] {
     },
     {
       id: "trophies",
-      title: "Trophies",
+      title: "Trophies and badges",
       tone: "magenta",
       blocks: [
         {
+          heading: "Trophies",
           items: [
             "Season champion, runner-up and 3rd place: awarded from the Season board when the season ends.",
-            "Event champion: awarded when an event finishes.",
-            ...Object.values(MILESTONES).map((m) => `${m.label}: ${m.description}`),
+            "Month 1 and Month 2 champion: top of each month board when the season ends.",
+            "Event champion: awarded when an event finishes. Finale champion: winning the season finale.",
+            ...BADGES.filter((b) => b.group === "trophy").map((b) => `${b.label}: ${b.description}`),
+          ],
+        },
+        {
+          heading: "Badges",
+          items: [
+            ...BADGES.filter((b) => b.group !== "trophy").map((b) => `${b.label}: ${b.description}`),
+            "Badges and achievement trophies are worked out from finished events and are never taken away. Walk-in guests don't earn them; register to start collecting.",
+            "Corp and Runner wins and the opponents you've played are only counted from events finished after badges were added.",
           ],
         },
       ],

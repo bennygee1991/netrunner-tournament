@@ -126,10 +126,27 @@ rules, venue info, an FAQ, or anything else.
 Keep explanations of game rules in line with the official Null Signal Games rules. Link to them
 rather than paraphrasing when you're unsure.
 
-## Trophies players can earn
+## Trophies and badges
 
-- 🏆 Season champion, 🥈 runner-up, 🥉 3rd place: from the Season board when you archive the season.
-- ⭐ Event champion: whenever an event finishes.
-- 🔌 Jacked in: played a first league event.
-- 🎖️ Veteran: played 10 league events.
-- 🛡️ Flawless Swiss: finished an event's Swiss rounds without losing a game.
+Everything below is handed out automatically. You never award anything by hand, and nothing is
+ever taken away (except that reopening an event removes its trophies until you finish it again).
+The full list with how to earn each one is on the **Rules** page and in the **Hall of champions**.
+
+**Trophies**
+- 🏆 Season champion, 🥈 runner-up, 🥉 3rd place, and 🗓️ Month 1 / Month 2 champion: from the boards when you archive the season.
+- ⭐ Event champion: whenever an event finishes. 👑 Finale champion: winning the season finale.
+- 🔁 Back-to-back, 💎 Perfect event, 🏛️ Dynasty, 🧗 Underdog: achievement trophies worked out from results.
+
+**Badges** (24 in all, in four groups)
+- Turning up: 1 / 5 / 10 / 25 / 50 events, a full season, two full seasons in a row (Ironman), and playing in the first season.
+- Playing well: made the cut (1 / 3 / 10 times), finalist, Flawless Swiss, Comeback, Diplomat.
+- Corp and Runner: 10 / 25 / 50 wins with each side, and Balanced (10 with both).
+- Community: Mentor (20 different registered opponents) and Reporter (10 of their own reports that you approved).
+
+Players see each badge's rarity ("held by 3 of 40 players"), a "Still to unlock" list on their own
+profile, and can feature up to 3 trophies or badges next to their name on their Account page.
+Finished event pages list what was earned there. Walk-in guests don't earn badges; once they
+register and you link their walk-in results, those results count.
+
+Corp/Runner wins and opponents are only known for events finished after badges were added, so
+side and Mentor badges start counting from then.

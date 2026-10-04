@@ -188,16 +188,21 @@ export async function opApproveAgreedReports(
   const pending = await pendingReports(db, await loadEvent(db, id.data));
   const toApply: { phase: "swiss" | "cut"; round: number; match: number; game: 1 | 2; result: GameResult }[] =
     [];
+  // Approved reports per player (for the Reporter badge).
+  const approvedBy = new Map<string, number>();
   for (const [key, entry] of pending) {
     const [phase, round, match] = key.split(":") as ["swiss" | "cut", string, string];
     for (const g of [1, 2] as const) {
       const st = entry.status[g];
-      if (st && st !== "conflict")
+      if (st && st !== "conflict") {
         toApply.push({ phase, round: Number(round), match: Number(match), game: g, result: st });
+        for (const r of entry.reports.filter((x) => x.game === g))
+          approvedBy.set(r.reporterId, (approvedBy.get(r.reporterId) ?? 0) + 1);
+      }
     }
   }
   if (!toApply.length) return { ok: false as const, error: "No agreed reports to approve." };
-  return runEventOp(
+  const res = await runEventOp(
     db,
     actor,
     id.data,
@@ -223,4 +228,9 @@ export async function opApproveAgreedReports(
     }),
     version,
   );
+  if (res.ok) {
+    for (const [userId, n] of approvedBy)
+      await db.user.updateMany({ where: { id: userId }, data: { reportsApproved: { increment: n } } });
+  }
+  return res;
 }

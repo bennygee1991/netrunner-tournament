@@ -3,6 +3,7 @@ import { seededRng } from "@/engine";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { hasTestDb, resetDb, testDb } from "../../../tests/test-db";
 import { updateProfile } from "../auth/accounts";
+import { backfillBadgeFacts } from "./backfill";
 import { getLiveBoards, getPastSeasons } from "./leaderboards";
 import { opFinish, opPairNext, opSetResult, opStartSwiss } from "./ops";
 import { getProfile } from "./profiles";
@@ -96,9 +97,15 @@ describe.skipIf(!hasTestDb)("leaderboards and profiles (database)", () => {
     expect(profile.user).not.toHaveProperty("passwordHash");
     expect(profile.stats).toMatchObject({ events: 2, titles: 1 });
     expect(profile.standing).toMatchObject({ seasonName: "S", total: kateSeason.total });
-    expect(profile.cabinet.map((t) => t.kind)).toEqual(
-      expect.arrayContaining(["event-champion", "first-event", "undefeated-swiss"]),
+    expect(profile.cabinet.map((t) => t.kind)).toContain("event-champion");
+    expect(profile.badges.map((b) => b.key)).toEqual(
+      expect.arrayContaining(["first-event", "undefeated-swiss"]),
     );
+    expect(profile.badges.find((b) => b.key === "first-event")).toMatchObject({
+      earnedAt: "Event 1 · S",
+      held: 1,
+    });
+    expect(profile.locked.map((b) => b.key)).toContain("ten-events");
     expect(profile.records.map((r) => r.eventName)).toEqual(["Event 3", "Event 1"]);
   });
 
@@ -123,8 +130,41 @@ describe.skipIf(!hasTestDb)("leaderboards and profiles (database)", () => {
 
     const profile = (await getProfile(db, "Ada Lovelace"))!;
     expect(profile.cabinet[0]).toMatchObject({ kind: "season-champion", detail: "Old" });
+    // Ada also topped the Month 1 board.
+    expect(profile.cabinet.map((t) => t.kind)).toContain("month1-champion");
     expect(profile.standing).toBeNull();
     expect(await getProfile(db, "Ada")).toBeNull();
+  });
+
+  it("backfill rewrites pre-badge records, adds finale and month trophies, and is idempotent", async () => {
+    const s = await createSeason(db, admin, { name: "B", firstDate: "2026-01-03" });
+    if (!s.ok) throw new Error();
+    await db.user.create({ data: { runnerName: "Ada", runnerNameLower: "ada", passwordHash: "x" } });
+    const events = await db.event.findMany({ where: { seasonId: s.seasonId }, orderBy: { index: "asc" } });
+    await playEvent(events[0]!.id, ["Ada", "Bob", "Cyd", "Dee"], "Ada");
+    const fresh = await db.eventRecord.findFirstOrThrow({ where: { playerName: "Ada" } });
+    expect(fresh).toMatchObject({
+      statsVersion: 2,
+      eventKey: events[0]!.id,
+      seasonId: s.seasonId,
+      madeCut: false,
+    });
+    expect(fresh.corpWins + fresh.runnerWins).toBe(2);
+
+    // Pretend the records predate badges, and that the event was the finale.
+    await db.eventRecord.updateMany({ data: { statsVersion: 1, corpWins: 0, runnerWins: 0 } });
+    await db.event.update({ where: { id: events[0]!.id }, data: { finale: true } });
+    expect(await backfillBadgeFacts(db)).toEqual({ events: 1, monthTrophies: 0 });
+    const filled = await db.eventRecord.findFirstOrThrow({ where: { playerName: "Ada" } });
+    expect(filled).toMatchObject({ statsVersion: 2, finale: true });
+    expect(filled.corpWins + filled.runnerWins).toBe(2);
+    expect(await db.trophy.count({ where: { kind: "finale-champion", playerName: "Ada" } })).toBe(1);
+
+    await archiveSeason(db, admin, s.seasonId, "B");
+    expect(await db.trophy.count({ where: { kind: "month1-champion" } })).toBe(1);
+    await db.trophy.deleteMany({ where: { kind: "month1-champion" } });
+    expect(await backfillBadgeFacts(db)).toEqual({ events: 0, monthTrophies: 1 });
+    expect(await backfillBadgeFacts(db)).toEqual({ events: 0, monthTrophies: 0 });
   });
 
   it("disabled accounts have no public profile; bios are saved and cleaned", async () => {

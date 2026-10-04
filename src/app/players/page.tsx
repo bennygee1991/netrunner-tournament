@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Avatar } from "@/components/avatar";
 import { Badge, PageTitle, buttonStyles, cx } from "@/components/ui";
 import { db } from "@/lib/db";
+import { iconOf } from "@/lib/tournament/badges";
 import { getPlayerDirectory } from "@/lib/tournament/community";
 
 export const metadata: Metadata = { title: "Players" };
@@ -71,11 +72,19 @@ export default async function PlayersPage({ searchParams }: PageProps<"/players"
                 <Avatar avatar={p.avatar} seed={p.id} size={48} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold">
-                    {p.runnerName} {p.organizer && <Badge tone="cyan">Organizer</Badge>}
+                    {p.runnerName} {p.organizer && <Badge tone="cyan">Organizer</Badge>}{" "}
+                    {p.featured.map((k) => {
+                      const i = iconOf(k);
+                      return i ? (
+                        <span key={k} title={i.label} role="img" aria-label={i.label}>
+                          {i.icon}
+                        </span>
+                      ) : null;
+                    })}
                   </span>
                   <span className="block font-mono text-xs text-muted">
                     {p.events} event{p.events === 1 ? "" : "s"} · {p.trophies} troph
-                    {p.trophies === 1 ? "y" : "ies"}
+                    {p.trophies === 1 ? "y" : "ies"} · {p.badges} badge{p.badges === 1 ? "" : "s"}
                     {p.titles > 0 && ` · ${p.titles} win${p.titles === 1 ? "" : "s"}`}
                   </span>
                   {p.bio && <span className="mt-1 line-clamp-2 block text-sm text-muted">{p.bio}</span>}

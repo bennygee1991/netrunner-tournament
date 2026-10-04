@@ -4,7 +4,7 @@ import {
   addDays,
   eventChampion,
   eventsForBoard,
-  milestoneTrophies,
+  monthTrophies,
   planSeason,
   seasonSnapshot,
   seasonTrophies,
@@ -103,13 +103,16 @@ describe("event trophies and milestones", () => {
     expect(undefeatedInSwiss(ev, byId).sort()).toEqual(["a", "c", "d"]);
   });
 
-  it("milestones", () => {
-    expect(milestoneTrophies({ eventsPlayed: 0, undefeatedSwissRuns: 0 })).toEqual([]);
-    expect(milestoneTrophies({ eventsPlayed: 1, undefeatedSwissRuns: 0 })).toEqual(["first-event"]);
-    expect(milestoneTrophies({ eventsPlayed: 10, undefeatedSwissRuns: 2 })).toEqual([
-      "first-event",
-      "ten-events",
-      "undefeated-swiss",
+  it("month champions: rank 1 of each month board with points", () => {
+    const m1 = [
+      { id: "a", rank: 1, total: 10 },
+      { id: "b", rank: 1, total: 10 },
+      { id: "c", rank: 3, total: 7 },
+    ];
+    const m2 = [{ id: "c", rank: 1, total: 0 }];
+    expect(monthTrophies(m1, m2)).toEqual([
+      { playerId: "a", kind: "month1-champion" },
+      { playerId: "b", kind: "month1-champion" },
     ]);
   });
 });

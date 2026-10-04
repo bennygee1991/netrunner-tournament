@@ -77,6 +77,9 @@ describe.skipIf(!hasTestDb)("player result reports (database)", () => {
     expect(view.standings.find((s) => s.points === 3)).toBeDefined();
     expect(await db.resultReport.count()).toBe(0);
     expect(await db.auditLog.count({ where: { action: "event.approve_reports" } })).toBe(1);
+    // Both reporters move towards the Reporter badge.
+    for (const u of [t.aUser, t.bUser])
+      expect((await db.user.findUniqueOrThrow({ where: { id: u } })).reportsApproved).toBe(1);
   });
 
   it("re-reporting replaces the earlier report; disagreements are flagged and not auto-approved", async () => {

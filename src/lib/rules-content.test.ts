@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_ROUNDS, EVENT_POINTS, FINALE, GAME_POINTS, MILESTONES, byePoints } from "@/engine";
+import { DEFAULT_ROUNDS, EVENT_POINTS, FINALE, GAME_POINTS, BADGES, byePoints } from "@/engine";
 import { rulesContent } from "./rules-content";
 
 const text = rulesContent()
@@ -49,6 +49,6 @@ describe("Rules page stays in sync with the engine", () => {
     ]) {
       expect(text).toContain(phrase);
     }
-    for (const m of Object.values(MILESTONES)) expect(text).toContain(m.label);
+    for (const b of BADGES) expect(text).toContain(`${b.label}: ${b.description}`);
   });
 });

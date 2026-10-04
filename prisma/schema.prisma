@@ -58,6 +58,10 @@ model User {
   bio                String?
   /// Chosen preset avatar key (see src/lib/avatars.ts); null = automatic default.
   avatar             String?
+  /// Up to 3 badge or trophy keys shown next to the name in the players directory.
+  featuredBadges     String[]  @default([])
+  /// Own result reports the organizer approved (for the Reporter badge).
+  reportsApproved    Int       @default(0)
   /// Display preferences (JSON object, validated with zod in the app).
   prefs              Json      @default("{}")
   createdAt          DateTime  @default(now())
@@ -250,24 +254,39 @@ model AuditLog {
  * reopened. Survives season resets (the event link is cleared) so profiles and milestones keep history.
  */
 model EventRecord {
-  id         String   @id @default(cuid())
-  eventId    String?
-  seasonName String
-  eventName  String
-  eventDate  DateTime @db.Date
-  userId     String?
+  id             String   @id @default(cuid())
+  eventId        String?
+  seasonName     String
+  eventName      String
+  eventDate      DateTime @db.Date
+  userId         String?
   /// Name at the time (guest name for walk-ins).
-  playerName String
-  placing    String
-  rank       Int
-  points     Int
-  wins       Int
-  draws      Int
-  losses     Int
-  champion   Boolean
+  playerName     String
+  placing        String
+  rank           Int
+  points         Int
+  wins           Int
+  draws          Int
+  losses         Int
+  champion       Boolean
   /// Finished Swiss without losing a game (at least one game played).
-  undefeated Boolean
-  createdAt  DateTime @default(now())
+  undefeated     Boolean
+  /// Stable event identity that survives the event being deleted (the event id when written).
+  eventKey       String
+  seasonId       String?
+  finale         Boolean  @default(false)
+  madeCut        Boolean  @default(false)
+  cutSeed        Int?
+  cutSize        Int?
+  cutDraws       Int      @default(0)
+  lostFirstRound Boolean  @default(false)
+  corpWins       Int      @default(0)
+  runnerWins     Int      @default(0)
+  /// Registered opponents (user ids), for the Mentor badge.
+  opponentIds    String[] @default([])
+  /// 1 = written before badges existed (side wins and opponents unknown), 2 = full facts.
+  statsVersion   Int      @default(1)
+  createdAt      DateTime @default(now())
 
   event Event? @relation(fields: [eventId], references: [id], onDelete: SetNull)
   user  User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -279,7 +298,8 @@ model EventRecord {
 /// Season podium and event champion trophies (milestones are derived from EventRecord).
 model Trophy {
   id         String   @id @default(cuid())
-  /// season-champion | season-second | season-third | event-champion
+  /// season-champion | season-second | season-third | event-champion | finale-champion |
+  /// month1-champion | month2-champion
   kind       String
   userId     String?
   playerName String

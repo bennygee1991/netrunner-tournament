@@ -148,6 +148,33 @@ test("the public event page shows results, bracket and standings", async ({ page
   await expect(page.getByRole("link", { name: /Kickoff Clash/ })).toContainText("Done");
 });
 
+test("finished events hand out badges that players can feature", async ({ page }) => {
+  await page.goto(eventUrl);
+  const earned = page.getByRole("list", { name: "Trophies and badges earned at this event" });
+  await expect(earned).toBeVisible();
+  await expect(earned.getByText("Event champion")).toBeVisible();
+  await expect(earned.getByText("Jacked in").first()).toBeVisible();
+
+  await loginOk(page, playerA);
+  await page.goto("/account");
+  await page.getByRole("checkbox", { name: /Jacked in/ }).check();
+  await page.getByRole("button", { name: "Save featured" }).click();
+  await expect(page.getByText("Saved.")).toBeVisible();
+
+  await page.goto(`/players?q=${encodeURIComponent(playerA)}`);
+  await expect(page.getByRole("img", { name: "Jacked in" })).toBeVisible();
+  await page.goto(`/players/${encodeURIComponent(playerA)}`);
+  await expect(page.getByRole("list", { name: "Badges", exact: true }).getByText("Jacked in")).toBeVisible();
+  await expect(page.getByText(/Held by \d+ of \d+ players/).first()).toBeVisible();
+  await expect(page.getByText(/Still to unlock/)).toBeVisible();
+  await logout(page);
+  await page.goto(`/players/${encodeURIComponent(playerA)}`);
+  await expect(page.getByText(/Still to unlock/)).toHaveCount(0);
+
+  await page.goto("/trophies");
+  await expect(page.getByRole("heading", { name: "Badges and achievement trophies" })).toBeVisible();
+});
+
 test("players cannot run events", async ({ page }) => {
   await loginOk(page, playerA);
   const res = await page.goto(eventUrl.replace("/events", "/admin/events"));

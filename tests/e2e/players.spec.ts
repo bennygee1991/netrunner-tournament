@@ -33,7 +33,7 @@ test("the hall of champions lists event champions and milestones", async ({ page
   await page.goto("/trophies");
   await expect(page.getByRole("heading", { level: 1, name: "Hall of champions" })).toBeVisible();
   await expect(page.getByText("⭐ Kickoff Clash")).toBeVisible();
-  await expect(page.getByRole("list", { name: "Jacked in holders" })).toBeVisible();
+  await expect(page.getByRole("list", { name: "Jacked in holders" })).toBeAttached(); // may be folded
   await page.goto("/leaderboards");
   await page.getByRole("link", { name: "Hall of champions" }).click();
   await expect(page).toHaveURL("/trophies");

@@ -329,6 +329,7 @@ describe.skipIf(!hasTestDb)("accounts (database)", () => {
       });
       await db.eventRecord.create({
         data: {
+          eventKey: "e0",
           seasonName: "S0",
           eventName: "E",
           eventDate: new Date(),

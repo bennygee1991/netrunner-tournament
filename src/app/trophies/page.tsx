@@ -5,7 +5,7 @@ import { Card, CardTitle, PageTitle } from "@/components/ui";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/format";
 import { type HallPlayer, getHallOfChampions } from "@/lib/tournament/community";
-import { TROPHY_INFO } from "@/lib/tournament/profiles";
+import { BADGE_GROUPS, STORED_TROPHIES } from "@/lib/tournament/badges";
 
 export const metadata: Metadata = { title: "Hall of champions" };
 
@@ -28,6 +28,26 @@ function Who({ p, size = 32 }: { p: HallPlayer; size?: number }) {
   );
 }
 
+function Holders({ label, holders }: { label: string; holders: HallPlayer[] }) {
+  const list = (
+    <ul className="flex flex-wrap gap-3" aria-label={`${label} holders`}>
+      {holders.map((h) => (
+        <li key={h.seed}>
+          <Who p={h} size={28} />
+        </li>
+      ))}
+    </ul>
+  );
+  // Long lists (everyone has "Jacked in") stay folded so the page stays short on phones.
+  if (holders.length <= 8) return list;
+  return (
+    <details>
+      <summary className="cursor-pointer text-sm text-cyan">Show all {holders.length} holders</summary>
+      <div className="mt-2">{list}</div>
+    </details>
+  );
+}
+
 export default async function TrophiesPage() {
   const hall = await getHallOfChampions(db);
   return (
@@ -36,8 +56,9 @@ export default async function TrophiesPage() {
       <nav aria-label="Sections" className="mb-4 flex flex-wrap gap-2 font-mono text-xs">
         {[
           ["#seasons", "Season champions"],
+          ["#months", "Month champions"],
           ["#events", "Event champions"],
-          ["#milestones", "Milestones"],
+          ["#badges", "Badges"],
         ].map(([href, label]) => (
           <a key={href} href={href} className="rounded border border-border px-2 py-1 hover:border-cyan">
             {label}
@@ -65,13 +86,33 @@ export default async function TrophiesPage() {
                 <ol className="space-y-2">
                   {s.places.map((pl, i) => (
                     <li key={i} className="flex items-center gap-3">
-                      <span className="w-8 text-center text-2xl" aria-label={TROPHY_INFO[pl.kind]?.label}>
-                        {TROPHY_INFO[pl.kind]?.icon}
+                      <span className="w-8 text-center text-2xl" aria-label={STORED_TROPHIES[pl.kind]?.label}>
+                        {STORED_TROPHIES[pl.kind]?.icon}
                       </span>
                       <Who p={pl.player} size={i === 0 ? 44 : 32} />
                     </li>
                   ))}
                 </ol>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      <Card id="months" className="scroll-mt-20">
+        <CardTitle>Month champions</CardTitle>
+        {hall.monthChampions.length === 0 ? (
+          <p className="text-muted">Awarded from the Month 1 and Month 2 boards when a season ends.</p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {hall.monthChampions.map((m) => (
+              <li key={m.id} className="flex items-center justify-between gap-3 py-2">
+                <Who p={m.player} />
+                <span className="shrink-0 text-right font-mono text-xs text-muted">
+                  🗓️ Month {m.month}
+                  <br />
+                  {m.seasonName}
+                </span>
               </li>
             ))}
           </ul>
@@ -88,7 +129,8 @@ export default async function TrophiesPage() {
               <li key={e.id} className="flex items-center justify-between gap-3 py-2">
                 <Who p={e.player} />
                 <span className="shrink-0 text-right font-mono text-xs text-muted">
-                  ⭐ {e.eventName}
+                  {e.finale ? "👑" : "⭐"} {e.eventName}
+                  {e.finale && " (finale)"}
                   <br />
                   {e.seasonName}
                 </span>
@@ -98,27 +140,36 @@ export default async function TrophiesPage() {
         )}
       </Card>
 
-      <Card id="milestones" className="scroll-mt-20">
-        <CardTitle>Milestones</CardTitle>
-        <div className="space-y-4">
-          {hall.milestones.map((m) => (
-            <section key={m.key}>
-              <h3 className="font-semibold">
-                <span aria-hidden>{TROPHY_INFO[m.key]?.icon}</span> {m.label}{" "}
-                <span className="font-mono text-xs text-muted">({m.holders.length})</span>
-              </h3>
-              <p className="mb-2 text-sm text-muted">{m.description}</p>
-              {m.holders.length === 0 ? (
-                <p className="text-sm text-muted">Nobody yet.</p>
-              ) : (
-                <ul className="flex flex-wrap gap-3" aria-label={`${m.label} holders`}>
-                  {m.holders.map((h) => (
-                    <li key={h.seed}>
-                      <Who p={h} size={28} />
+      <Card id="badges" className="scroll-mt-20">
+        <CardTitle>Badges and achievement trophies</CardTitle>
+        <p className="mb-3 text-sm text-muted">
+          Earned automatically from finished events and never taken away. Rarity counts registered players who
+          have played at least one event.
+        </p>
+        <div className="space-y-6">
+          {BADGE_GROUPS.map(({ group, label }) => (
+            <section key={group} aria-label={label}>
+              <h3 className="mb-2 font-mono text-xs tracking-widest text-magenta uppercase">{label}</h3>
+              <ul className="space-y-4">
+                {hall.badges
+                  .filter((b) => b.group === group)
+                  .map((b) => (
+                    <li key={b.key}>
+                      <p className="font-semibold">
+                        <span aria-hidden>{b.icon}</span> {b.label}{" "}
+                        <span className="font-mono text-xs font-normal text-muted">
+                          held by {b.holders.length} of {b.of} player{b.of === 1 ? "" : "s"}
+                        </span>
+                      </p>
+                      <p className="mb-1 text-sm text-muted">{b.description}</p>
+                      {b.holders.length === 0 ? (
+                        <p className="text-sm text-muted">Nobody yet.</p>
+                      ) : (
+                        <Holders label={b.label} holders={b.holders} />
+                      )}
                     </li>
                   ))}
-                </ul>
-              )}
+              </ul>
             </section>
           ))}
         </div>
