@@ -35,7 +35,7 @@ describe.skipIf(!hasTestDb)("players directory and hall of champions (database)"
     });
 
   it("lists active players with counts, searchable and sortable", async () => {
-    const ada = await user("Ada", { avatar: "eye-cyan" });
+    const ada = await user("Ada", { avatar: "eye-cyan", bio: "Anarch fan", email: "ada@example.com" });
     const bob = await user("Bob");
     await user("Hidden", { disabledAt: new Date() });
     await record(ada.id, "Ada", true);
@@ -47,7 +47,17 @@ describe.skipIf(!hasTestDb)("players directory and hall of champions (database)"
 
     const byName = await getPlayerDirectory(db, {});
     expect(byName.map((p) => p.runnerName)).toEqual(["Ada", "Bob"]);
-    expect(byName[0]).toMatchObject({ avatar: "eye-cyan", events: 2, titles: 1, trophies: 1 });
+    expect(byName[0]).toMatchObject({
+      avatar: "eye-cyan",
+      bio: "Anarch fan",
+      events: 2,
+      titles: 1,
+      trophies: 1,
+    });
+    // The directory is public: it must never carry emails or password hashes.
+    expect(JSON.stringify(byName)).not.toContain("ada@example.com");
+    expect(byName[0]).not.toHaveProperty("email");
+    expect(byName[0]).not.toHaveProperty("passwordHash");
     expect((await getPlayerDirectory(db, { sort: "events" })).map((p) => p.runnerName)).toEqual([
       "Ada",
       "Bob",
