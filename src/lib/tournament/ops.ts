@@ -20,6 +20,7 @@ import { type Actor, audit } from "../audit";
 import { ConflictError, ServiceError } from "./errors";
 import { finaleOrder, seasonStandingsByPlayer } from "./finale";
 import { clearOutcome, recordOutcome } from "./records";
+import { pruneReports } from "./reports";
 import { type LoadedEvent, loadEvent, saveEvent } from "./state";
 
 export type OpResult = { ok: true; state: EventState } | { ok: false; error: string };
@@ -47,6 +48,8 @@ export async function runEventOp(
         throw new ConflictError();
       const next = op(loaded);
       await saveEvent(tx, id.data, loaded.version, next);
+      // Player reports only make sense for games still open in the current pairings.
+      await pruneReports(tx, id.data, next);
       const wasDone = loaded.state.status === "done";
       const isDone = next.status === "done";
       if (isDone && !wasDone) await recordOutcome(tx, loaded, next);

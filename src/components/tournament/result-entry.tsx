@@ -89,6 +89,20 @@ export function ResultEntry({
   const corpIsA = match.corpId === null ? null : match.corpId === match.a.id;
   const base = { eventId, phase, round, match: match.index, a: match.a.id, b: match.b.id };
   const tieLabel = phase === "cut" ? "Tie*" : "Tie";
+  const describe = (r: "A" | "B" | "D") =>
+    r === "D" ? "tie" : `${r === "A" ? match.a.name : match.b!.name} won`;
+  const reportLine = (game: 1 | 2) => {
+    const reports = match.reports?.reports.filter((r) => r.game === game) ?? [];
+    if (!reports.length) return null;
+    const status = match.reports?.status[game];
+    return (
+      <p className={cx("font-mono text-xs", status === "conflict" ? "text-danger" : "text-warn")}>
+        {status === "conflict" ? "⚠ Players disagree: " : "Reported: "}
+        {reports.map((r) => `${r.reporterName} says ${describe(r.result)}`).join(" · ")}
+        {status && status !== "conflict" && " · tap that result to approve"}
+      </p>
+    );
+  };
   return (
     <div className="space-y-1 py-2" data-testid={`match-${phase}-${round}-${match.index}`}>
       <p className="font-mono text-[11px] tracking-widest text-muted uppercase">
@@ -98,6 +112,7 @@ export function ResultEntry({
       <ActionForm action={action} fields={{ ...base, game: 1 }} showMessage={false}>
         <Buttons match={match} current={match.g1} corpIsA={corpIsA} allowTie tieLabel={tieLabel} />
       </ActionForm>
+      {match.g1 === null && reportLine(1)}
       {double && (
         <>
           <p className="font-mono text-[11px] tracking-widest text-muted uppercase">Game 2 · sides swap</p>
@@ -110,6 +125,7 @@ export function ResultEntry({
               tieLabel="Tie"
             />
           </ActionForm>
+          {match.g2 === null && reportLine(2)}
         </>
       )}
     </div>

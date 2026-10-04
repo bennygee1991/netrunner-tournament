@@ -11,6 +11,7 @@ import {
 import type { PrismaClient } from "@/generated/prisma/client";
 import { todayIso, toIsoDate } from "./dates";
 import { type SeedingRow, seasonStandingsByPlayer, seedingTable } from "./finale";
+import { type MatchReports, matchKey, pendingReports } from "./reports";
 import { readPrizes } from "./season";
 import { type LoadedEvent, eventInclude, toLoaded } from "./state";
 
@@ -67,6 +68,8 @@ export interface MatchView {
   corpId: string | null;
   g1: "A" | "B" | "D" | null;
   g2: "A" | "B" | "D" | null;
+  /** Player reports waiting for the organizer (open games only). */
+  reports: MatchReports | null;
 }
 
 export interface RoundView {
@@ -108,6 +111,8 @@ export interface EventView {
   pending: { userId: string; runnerName: string; at: Date }[];
   /** Season finale: cut qualification by season standings (projected until the cut starts). */
   seasonSeeding: SeedingRow[] | null;
+  /** Number of games whose player reports agree and can be approved in one go. */
+  agreedReports: number;
 }
 
 export async function getEventView(db: PrismaClient, eventId: string): Promise<EventView | null> {
@@ -120,6 +125,7 @@ export async function getEventView(db: PrismaClient, eventId: string): Promise<E
   const loaded = toLoaded(row);
   const { state, nameOf } = loaded;
   const player = (id: string) => ({ id, name: nameOf(id) });
+  const reports = await pendingReports(db, loaded);
   const roundViews = (rounds: typeof state.rounds, phase: "swiss" | "cut"): RoundView[] =>
     rounds.map((r, i) => ({
       index: i,
@@ -134,6 +140,7 @@ export async function getEventView(db: PrismaClient, eventId: string): Promise<E
         corpId: m.corp === null || m.b === null ? null : m.corp === "a" ? m.a : m.b,
         g1: m.g1,
         g2: m.g2,
+        reports: reports.get(matchKey(phase, i, j)) ?? null,
       })),
     }));
 
@@ -177,6 +184,10 @@ export async function getEventView(db: PrismaClient, eventId: string): Promise<E
       row.finale && state.status !== "signup"
         ? seedingTable(state, nameOf, loaded.entrants, await seasonStandingsByPlayer(db, row.seasonId))
         : null,
+    agreedReports: [...reports.values()].reduce(
+      (t, r) => t + Object.values(r.status).filter((s) => s && s !== "conflict").length,
+      0,
+    ),
     pending: signups
       .filter((s) => !entrantUserIds.has(s.userId) && !s.user.disabledAt)
       .map((s) => ({ userId: s.userId, runnerName: s.user.runnerName, at: s.createdAt })),

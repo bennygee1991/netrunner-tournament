@@ -58,6 +58,15 @@ The **Next step** card always shows the one button you need.
 
 Players can follow along on the public event page, which refreshes itself every 20 seconds.
 
+**Players can report their own results.** During a round, a signed-in player sees a **Your match**
+card on the event page with **I won / Tie / I lost** (per game for double-sided rounds). Reports
+never count by themselves:
+
+- On your admin page each match shows what was reported, or **⚠ Players disagree**.
+- **Approve all agreed results** confirms every reported game in one tap; disagreements are left
+  for you. You can always tap the result yourself instead, which also clears the reports.
+- Reports for a round you restart or undo are discarded automatically.
+
 ## 5. Fixing mistakes
 
 All of these are on the event's admin page and recorded in **Admin → Audit**.

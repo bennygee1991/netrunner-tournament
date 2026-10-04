@@ -20,6 +20,7 @@ import { type EventView, getEventView } from "@/lib/tournament/queries";
 import {
   addPlayerAction,
   approveAction,
+  approveReportsAction,
   approveAllAction,
   dropAction,
   finishAction,
@@ -97,6 +98,17 @@ function NextStepCard({ view }: { view: EventView }) {
   return (
     <Card tone="magenta">
       <CardTitle>Next step</CardTitle>
+      {view.agreedReports > 0 && (
+        <ActionForm action={approveReportsAction} fields={fields} className="mb-4">
+          <p className="mb-2 text-sm">
+            Players have reported {view.agreedReports} result{view.agreedReports === 1 ? "" : "s"} that both
+            sides agree on (or that only one player has reported so far).
+          </p>
+          <SubmitButton pendingText="Approving…">
+            Approve all agreed results ({view.agreedReports})
+          </SubmitButton>
+        </ActionForm>
+      )}
       {content}
     </Card>
   );

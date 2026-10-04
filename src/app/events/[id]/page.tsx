@@ -4,6 +4,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { LiveRefresh } from "@/components/live-refresh";
 import { MatchCard } from "@/components/tournament/match-card";
+import { MyMatch } from "@/components/tournament/my-match";
+import { myOpenMatch } from "@/lib/tournament/my-match";
 import { FinaleBanner, SeasonSeeding } from "@/components/tournament/season-seeding";
 import { ResultsTable } from "@/components/tournament/results-table";
 import { SignupButton } from "@/components/tournament/signup-button";
@@ -29,6 +31,7 @@ export default async function EventPage({ params }: PageProps<"/events/[id]">) {
   const live = meta.status === "SWISS" || meta.status === "CUT";
   const profiles = new Map(view.entrants.map((e) => [e.id, e.userId ? e.name : null]));
   const profileOf = (id: string) => profiles.get(id) ?? null;
+  const myMatch = myOpenMatch(view, user?.id);
   const signedUp = user ? (await db.signup.count({ where: { eventId: id, userId: user.id } })) > 0 : false;
 
   return (
@@ -52,6 +55,7 @@ export default async function EventPage({ params }: PageProps<"/events/[id]">) {
       </p>
 
       {meta.finale && <FinaleBanner />}
+      {myMatch && <MyMatch {...myMatch} />}
 
       {meta.notes && (
         <Card>

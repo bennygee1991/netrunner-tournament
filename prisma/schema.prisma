@@ -70,6 +70,7 @@ model User {
   eventRecords EventRecord[]
   trophies     Trophy[]
   guideEdits   GuideRevision[]
+  reports      ResultReport[]
 }
 
 /// Server-side session. The cookie holds a random token; only its SHA-256 hash is stored here.
@@ -141,10 +142,11 @@ model Event {
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
-  season   Season        @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  season   Season         @relation(fields: [seasonId], references: [id], onDelete: Cascade)
   entrants Entrant[]
   signups  Signup[]
   rounds   Round[]
+  reports  ResultReport[]
   records  EventRecord[]
   trophies Trophy[]
 
@@ -328,4 +330,33 @@ model GuideRevision {
   editor User?     @relation(fields: [editorId], references: [id], onDelete: SetNull)
 
   @@index([pageId, createdAt])
+}
+
+/**
+ * A player's own report of a game result, waiting for the organizer to approve it. Identified by
+ * round/table/players (match rows are rebuilt on every change), so a re-paired round orphans it.
+ */
+model ResultReport {
+  id         String     @id @default(cuid())
+  eventId    String
+  phase      Phase
+  /// 0-based round index within the phase.
+  round      Int
+  /// 0-based match index within the round.
+  match      Int
+  /// 1, or 2 for double-sided game 2.
+  game       Int
+  aEntrantId String
+  bEntrantId String
+  /// Result from the match's A/B point of view.
+  result     GameResult
+  reporterId String
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  event    Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  reporter User  @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, phase, round, match, game, reporterId])
+  @@index([eventId])
 }

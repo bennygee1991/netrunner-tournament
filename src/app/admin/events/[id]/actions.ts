@@ -25,6 +25,7 @@ import {
   rejectSignup,
   removeEntrant,
 } from "@/lib/tournament/registration";
+import { opApproveAgreedReports } from "@/lib/tournament/reports";
 import { cryptoRng } from "@/lib/tournament/rng";
 import { updateEventSetup } from "@/lib/tournament/season";
 
@@ -175,4 +176,14 @@ export async function undropAction(_p: FormState, form: FormData): Promise<FormS
   const actor = await adminActor();
   const eventId = str(form, "eventId");
   return finish(eventId, await opUndrop(db, actor, eventId, str(form, "entrantId")));
+}
+
+export async function approveReportsAction(_p: FormState, form: FormData): Promise<FormState> {
+  const actor = await adminActor();
+  const eventId = str(form, "eventId");
+  return finish(
+    eventId,
+    await opApproveAgreedReports(db, actor, eventId, cryptoRng, str(form, "version")),
+    "Reported results approved.",
+  );
 }
