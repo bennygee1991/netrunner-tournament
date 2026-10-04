@@ -6,6 +6,7 @@ import { EventStatusBadge, formatLine } from "@/components/tournament/status-bad
 import { db } from "@/lib/db";
 import { formatDay, todayIso } from "@/lib/tournament/dates";
 import { getActiveSeason } from "@/lib/tournament/queries";
+import { leagueFormat } from "@/lib/tournament/season";
 import { ArchiveSeasonCard, ResetAllCard } from "./danger-zone";
 import { CreateSeasonForm, PrizesForm } from "./season-forms";
 
@@ -22,7 +23,11 @@ export default async function AdminSeasonPage({ searchParams }: PageProps<"/admi
         <Notice code={notice} />
         <Card tone="magenta">
           <CardTitle>Start a season</CardTitle>
-          <CreateSeasonForm defaultName={`Season ${past + 1}`} defaultDate={todayIso()} />
+          <CreateSeasonForm
+            defaultName={`Season ${past + 1}`}
+            defaultDate={todayIso()}
+            formats={[false, false, false, true].map((finale) => leagueFormat(finale))}
+          />
         </Card>
         <ResetAllCard />
       </>

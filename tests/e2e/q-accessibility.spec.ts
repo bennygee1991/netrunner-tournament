@@ -60,6 +60,7 @@ for (const scheme of ["dark", "light"] as const) {
         "/account/password",
         "/admin",
         "/admin/season",
+        "/admin/events",
         "/admin/players",
         "/admin/audit",
       ]) {

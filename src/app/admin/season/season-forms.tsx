@@ -3,10 +3,29 @@
 import { useActionState } from "react";
 import { SubmitButton } from "@/components/submit-button";
 import { Field, FormMessage } from "@/components/ui";
+import { type EventFormat, EventFormatFields } from "@/components/tournament/event-format-fields";
 import type { Prizes } from "@/lib/tournament/season";
+
+/** Field errors for one event of the season form ("e2.swissRounds" -> "swissRounds"). */
+function eventErrors(fe: Partial<Record<string, string>>, n: number) {
+  const out: Partial<Record<string, string>> = {};
+  for (const [k, v] of Object.entries(fe)) if (k.startsWith(`e${n}.`)) out[k.slice(3)] = v;
+  return out;
+}
 import { createSeasonAction, updatePrizesAction } from "./actions";
 
-export function CreateSeasonForm({ defaultName, defaultDate }: { defaultName: string; defaultDate: string }) {
+const EVENT_NAMES = ["Event 1", "Event 2", "Event 3", "Season finale (double points)"];
+
+export function CreateSeasonForm({
+  defaultName,
+  defaultDate,
+  formats,
+}: {
+  defaultName: string;
+  defaultDate: string;
+  /** League defaults per event, shown pre-ticked. */
+  formats: EventFormat[];
+}) {
   const [state, action] = useActionState(createSeasonAction, {});
   const fe = state.fieldErrors ?? {};
   return (
@@ -28,6 +47,19 @@ export function CreateSeasonForm({ defaultName, defaultDate }: { defaultName: st
         required
         hint="Creates 4 events, one every 2 weeks. Events 1-2 feed the Month 1 board, events 3-4 Month 2."
       />
+      <p className="mb-2 font-mono text-xs tracking-widest text-muted uppercase">Event formats</p>
+      <p className="mb-2 text-sm text-muted">
+        Pre-set to the league format (events 1-3 Swiss only, the finale with a top 4 cut). Open an event to
+        change it; you can also change it later in the event&apos;s setup.
+      </p>
+      {formats.map((f, i) => (
+        <details key={i} className="mb-2 rounded border border-border px-3 py-2">
+          <summary className="cursor-pointer font-semibold">{EVENT_NAMES[i]}</summary>
+          <div className="mt-3">
+            <EventFormatFields prefix={`e${i + 1}.`} initial={f} errors={eventErrors(fe, i + 1)} />
+          </div>
+        </details>
+      ))}
       <SubmitButton pendingText="Creating…">Create season</SubmitButton>
     </form>
   );

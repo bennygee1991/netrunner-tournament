@@ -49,6 +49,45 @@ describe.skipIf(!hasTestDb)("league season format and series cut (database)", ()
     ]);
   });
 
+  it("lets the organizer pick each event's format when creating a season", async () => {
+    await db.season.deleteMany({});
+    const fmt = (matchFormat: string, swissRounds: string, cutSize: string, cutFormat: string) => ({
+      matchFormat,
+      swissRounds,
+      cutSize,
+      cutFormat,
+    });
+    const bad = await createSeason(db, admin, {
+      name: "Custom",
+      firstDate: "2026-02-07",
+      events: [
+        fmt("SINGLE", "3", "0", "SINGLE"),
+        fmt("SINGLE", "99", "0", "SINGLE"),
+        fmt("SINGLE", "", "0", "SINGLE"),
+        fmt("SINGLE", "", "4", "SERIES"),
+      ],
+    });
+    expect(bad).toMatchObject({ ok: false, fieldErrors: { "e2.swissRounds": expect.any(String) } });
+    const ok = await createSeason(db, admin, {
+      name: "Custom",
+      firstDate: "2026-02-07",
+      events: [
+        fmt("DOUBLE", "", "0", "SINGLE"),
+        fmt("SINGLE", "4", "4", "SINGLE"),
+        fmt("DOUBLE", "2", "0", "SERIES"),
+        fmt("DOUBLE", "3", "8", "SERIES"),
+      ],
+    });
+    if (!ok.ok) throw new Error(JSON.stringify(ok));
+    const events = await db.event.findMany({ where: { seasonId: ok.seasonId }, orderBy: { index: "asc" } });
+    expect(events.map((e) => [e.matchFormat, e.swissRounds, e.cutSize, e.cutFormat, e.finale])).toEqual([
+      ["DOUBLE", null, 0, "SINGLE", false],
+      ["SINGLE", 4, 4, "SINGLE", false],
+      ["DOUBLE", 2, 0, "SERIES", false],
+      ["DOUBLE", 3, 8, "SERIES", true],
+    ]);
+  });
+
   /** Finale with 1 Swiss round so the cut is quick to reach; Ann..Dan win/lose to set seeds. */
   async function finaleAtCut() {
     const ev = await db.event.findUniqueOrThrow({ where: { id: finaleId } });

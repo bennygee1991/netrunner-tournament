@@ -30,7 +30,7 @@ test("the season finale plays a top 4 cut where the higher seed picks sides", as
   await expect(page.getByText(/Event 2.*no cut/).first()).toBeVisible();
   await page.getByRole("link", { name: /Season finale/ }).click();
   await expect(page.getByText(/top 4 cut \(higher seed picks sides, 2 games \+ decider\)/)).toBeVisible();
-  await expect(page.getByLabel("Cut matches")).toHaveValue("SERIES");
+  await expect(page.getByRole("radio", { name: /^Higher seed picks sides/ })).toBeChecked();
 
   for (const guest of ["Fin One", "Fin Two", "Fin Three", "Fin Four"]) {
     await page.getByLabel("Add player").fill(guest);

@@ -15,16 +15,16 @@ The full player-facing rules are on the site's **Rules** page and always match w
 ## 1. Start a season
 
 1. Go to **Admin → Season → Start a season**.
-2. Enter a name and the date of the first event, then click **Create season**. This creates four events, two weeks apart, already set up in the league format (you can still change any of them before it starts).
+2. Enter a name and the date of the first event. Under **Event formats** each event is pre-set to the league format; open one to change its toggles (single- or double-sided, Swiss rounds, top cut, cut matches). Click **Create season**. This creates the four events, two weeks apart; you can still change any of them in its setup until it starts.
 3. Fill in the **Prizes** for Month 1, Month 2 and the Season, then click **Save prizes**. Players see them on the leaderboards.
 
 ## 2. Set up each event
 
 Open the event from **Admin → Season**. Under **Event setup** you can set:
 - **Name, date, leaderboard month.** You can change these at any time.
-- **Match format:**
-  - **Single-sided:** 1 game per round, about 40-45 minutes. The site picks who plays Corp so each player's sides stay even.
-  - **Double-sided:** 2 games per round, about 65-70 minutes. A coin flip decides game 1's sides, then they swap.
+- **Match format** (tap a toggle):
+  - **Single-sided:** 1 game per round, 45-minute round clock. The site assigns who plays Corp so each player's sides stay even (a coin flip when they are).
+  - **Double-sided:** 2 games per round, 65-minute round clock. Everyone plays both sides: a coin flip decides game 1's sides, then they swap.
 - **Swiss rounds:** leave empty for the recommended number (it depends on how many players turn up), or set 1-9.
 - **Top cut:** none, top 4 or top 8. If fewer players turn up, the cut shrinks to fit. The cut is single elimination, a house rule; official NSG top 8s are double elimination.
 - **Cut matches:** the league format (higher seed picks sides, 2 games + a decider), or single games with sides set by the site.
@@ -47,6 +47,17 @@ count double.
 A tied game counts for neither player, so one win and one tie wins the match. If game 3 ends
 tied, the higher seed advances. Sides can be changed until the first result of the match is in.
 
+### One-off events
+
+**Admin → One-offs** creates events outside the season, such as a store championship or a
+holiday special. Fill in the name and date, tick the format toggles (the same ones as season
+events), and click **Create one-off event**. One-offs:
+- take sign-ups whether or not a season is running, and show on the home and Events pages;
+- give **no league points** (they never touch the leaderboards);
+- award the 🎪 **One-off champion** trophy and the one-off badges (Wildcard, Globetrotter,
+  World tour, Special guest, Crossover, and the 🎤 Headliner trophy for 3 one-off wins);
+- can be deleted from the bottom of their admin page by typing the event name.
+
 ## 3. Sign-ups
 
 - Players sign up on the home page, after creating an account with their runner name.
@@ -66,6 +77,13 @@ The **Next step** card always shows the one button you need.
 3. When every result is in, tap **Pair round 2**, and so on. Players who have the same score meet; the same two players never meet twice unless there's no other way.
 4. After the last Swiss round, tap **Start top 4/8 cut**, or **Finish event** if there's no cut.
 5. In the cut, enter each game. In the league format, pick sides first if the higher seed hasn't. The next round is paired automatically when every match has a winner, and the final finishes the event.
+
+**The round clock.** Once a round is paired and everyone is seated, tap **Start clock** on the
+Next step card. Swiss rounds get 45 minutes (single-sided) or 65 (double-sided). In the cut, each
+match gets 65 minutes for games 1 and 2; if a game 3 is needed, start its own 45-minute clock on
+that match. You can **Pause**, add a minute (**+1 min**) or **Restart**. Players see the same
+countdown on the event page and in the flowchart; it turns red at time. The clock resets when you
+pair the next round.
 
 Players can follow along on the public event page, which refreshes itself every 20 seconds. It
 opens on the **Flowchart**: one column per Swiss round showing who plays whom at each table, their

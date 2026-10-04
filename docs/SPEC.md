@@ -136,3 +136,17 @@ public, so say "taken"), security headers, admin routes behind role check in mid
   what the migration could recover.
 - Rarity is "held by N of M players" (M = active accounts with at least one finished event).
   Players see their locked badges on their own profile and feature up to 3 next to their name.
+
+## 12. One-off events and the round clock (owner decisions, 2026-10-04)
+- **One-off events**: created by the organizer outside any season with the same format toggles
+  (single/double-sided Swiss, rounds, cut size, cut format). No league points; results are kept on
+  profiles. Trophy: One-off champion. Badges: Wildcard (1), Globetrotter (5), World tour (10),
+  Special guest (made a one-off cut), Crossover (league + one-off), Headliner trophy (3 one-off
+  wins). League attendance and season badges count season events only; playing badges (cuts, sides,
+  Mentor, Perfect event, Underdog) count both. One-offs can be deleted with typed confirmation.
+- **Format toggles** are the same everywhere: season creation (per event, pre-set to the league
+  format), event setup and one-off creation.
+- **Round clock** (house rule): 45 minutes single-sided Swiss, 65 double-sided; cut: 65 minutes per
+  series match for games 1-2 plus 45 for a deciding game 3 (its own clock), 45 for a single-game cut
+  match. The organizer starts it once players are seated and can pause, add a minute or restart.
+  Shown live on the event page and flowchart. What happens at time is unchanged (Rules page).
