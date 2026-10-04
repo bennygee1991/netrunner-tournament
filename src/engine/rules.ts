@@ -51,6 +51,13 @@ export function pointsForSwissRank(rank: number): number {
 
 export const SEASON = { events: 4, daysBetweenEvents: 14, eventsPerMonth: 2 } as const;
 
+/**
+ * Season finale (league house rule, owner decision 2026-10-04): the last event of the season
+ * awards double league points, plays 1 Swiss round, then a top 8 cut whose players and seeds come
+ * from the Season board (events so far), ties broken by the finale's Swiss standings.
+ */
+export const FINALE = { pointsMultiplier: 2, swissRounds: 1, cutSize: 8 } as const;
+
 export const MILESTONES = {
   firstEvent: { key: "first-event", label: "Jacked in", description: "Played a first league event." },
   tenEvents: { key: "ten-events", label: "Veteran", description: "Played 10 league events.", count: 10 },

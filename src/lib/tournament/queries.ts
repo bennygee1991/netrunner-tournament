@@ -10,6 +10,8 @@ import {
 } from "@/engine";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { todayIso, toIsoDate } from "./dates";
+import { type SeedingRow, seasonStandingsByPlayer, seedingTable } from "./finale";
+import { type MatchReports, matchKey, pendingReports } from "./reports";
 import { readPrizes } from "./season";
 import { type LoadedEvent, eventInclude, toLoaded } from "./state";
 
@@ -66,6 +68,8 @@ export interface MatchView {
   corpId: string | null;
   g1: "A" | "B" | "D" | null;
   g2: "A" | "B" | "D" | null;
+  /** Player reports waiting for the organizer (open games only). */
+  reports: MatchReports | null;
 }
 
 export interface RoundView {
@@ -94,9 +98,12 @@ export interface EventView {
     startTime: string | null;
     venue: string | null;
     notes: string | null;
+    finale: boolean;
   };
   nextStep: ReturnType<typeof nextStep>;
   standings: Standing[];
+  /** Every player's Swiss points after each round (for the flowchart). */
+  pointsAfter: Record<string, number>[];
   results: Map<string, EventResult> | null;
   swiss: RoundView[];
   cut: RoundView[];
@@ -104,6 +111,10 @@ export interface EventView {
   entrants: LoadedEvent["entrants"];
   /** Sign-ups not yet approved. */
   pending: { userId: string; runnerName: string; at: Date }[];
+  /** Season finale: cut qualification by season standings (projected until the cut starts). */
+  seasonSeeding: SeedingRow[] | null;
+  /** Number of games whose player reports agree and can be approved in one go. */
+  agreedReports: number;
 }
 
 export async function getEventView(db: PrismaClient, eventId: string): Promise<EventView | null> {
@@ -116,6 +127,7 @@ export async function getEventView(db: PrismaClient, eventId: string): Promise<E
   const loaded = toLoaded(row);
   const { state, nameOf } = loaded;
   const player = (id: string) => ({ id, name: nameOf(id) });
+  const reports = await pendingReports(db, loaded);
   const roundViews = (rounds: typeof state.rounds, phase: "swiss" | "cut"): RoundView[] =>
     rounds.map((r, i) => ({
       index: i,
@@ -130,6 +142,7 @@ export async function getEventView(db: PrismaClient, eventId: string): Promise<E
         corpId: m.corp === null || m.b === null ? null : m.corp === "a" ? m.a : m.b,
         g1: m.g1,
         g2: m.g2,
+        reports: reports.get(matchKey(phase, i, j)) ?? null,
       })),
     }));
 
@@ -160,14 +173,28 @@ export async function getEventView(db: PrismaClient, eventId: string): Promise<E
       startTime: row.startTime,
       venue: row.venue,
       notes: row.notes,
+      finale: row.finale,
     },
     nextStep: nextStep(state),
     standings: state.status === "signup" ? [] : standings(state, nameOf),
+    pointsAfter: state.rounds.map((_, i) =>
+      Object.fromEntries(
+        standings({ ...state, rounds: state.rounds.slice(0, i + 1) }, nameOf).map((s) => [s.id, s.points]),
+      ),
+    ),
     results: state.status === "done" ? eventResults(state, nameOf) : null,
     swiss: roundViews(state.rounds, "swiss"),
     cut: roundViews(state.cut, "cut"),
     seeds: state.cut.length ? cutSeeds(state, nameOf) : new Map(),
     entrants: loaded.entrants,
+    seasonSeeding:
+      row.finale && state.status !== "signup"
+        ? seedingTable(state, nameOf, loaded.entrants, await seasonStandingsByPlayer(db, row.seasonId))
+        : null,
+    agreedReports: [...reports.values()].reduce(
+      (t, r) => t + Object.values(r.status).filter((s) => s && s !== "conflict").length,
+      0,
+    ),
     pending: signups
       .filter((s) => !entrantUserIds.has(s.userId) && !s.user.disabledAt)
       .map((s) => ({ userId: s.userId, runnerName: s.user.runnerName, at: s.createdAt })),

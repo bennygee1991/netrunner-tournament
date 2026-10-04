@@ -41,6 +41,13 @@ export interface EventState {
   cutSize: number;
   rounds: Round[];
   cut: Round[];
+  /** League points multiplier for this event (the season finale doubles points). Default 1. */
+  pointsMultiplier?: number;
+  /**
+   * Season finale: the cut is seeded from this order (season standings) instead of the Swiss
+   * standings. Set when the cut starts; absent for normal events.
+   */
+  cutSeedOrder?: string[];
 }
 
 /** Display name for a player id; used for the final, deterministic tiebreak. */

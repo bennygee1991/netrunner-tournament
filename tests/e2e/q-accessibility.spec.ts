@@ -43,7 +43,10 @@ for (const scheme of ["dark", "light"] as const) {
         .locator('a[href^="/events/"]')
         .evaluateAll((as) => as.map((a) => a.getAttribute("href")!));
       expect(events.length).toBeGreaterThan(0);
-      for (const href of events) await audit(page, href);
+      for (const href of events) {
+        await audit(page, href);
+        await audit(page, `${href}?view=list`);
+      }
       await page.goto("/leaderboards?board=season");
       const profiles = page.locator('a[href^="/players/"]');
       expect(await profiles.count()).toBeGreaterThan(0);

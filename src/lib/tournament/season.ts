@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CUT_SIZES, SWISS_ROUNDS_MAX, SWISS_ROUNDS_MIN, planSeason } from "@/engine";
+import { CUT_SIZES, FINALE, SWISS_ROUNDS_MAX, SWISS_ROUNDS_MIN, planSeason } from "@/engine";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { type Actor, audit } from "../audit";
 import { fromIsoDate, isoDateSchema, toIsoDate } from "./dates";
@@ -38,9 +38,10 @@ export async function createSeason(
         events: {
           create: plan.map((e) => ({
             index: e.index,
-            name: e.name,
+            name: e.finale ? "Season finale" : e.name,
             date: fromIsoDate(e.date),
             month: e.month,
+            ...(e.finale ? { finale: true, swissRounds: FINALE.swissRounds, cutSize: FINALE.cutSize } : {}),
           })),
         },
       },
@@ -85,6 +86,8 @@ const eventSetupInput = z.object({
     .optional(),
   venue: z.string().trim().max(120, "Venue must be at most 120 characters.").optional(),
   notes: z.string().trim().max(1000, "Notes must be at most 1000 characters.").optional(),
+  /** Season finale (double points, season-seeded cut); locked once the event starts. */
+  finale: z.boolean().optional(),
 });
 
 const orNull = (v: string | undefined) => (v === undefined ? undefined : v === "" ? null : v);
@@ -106,7 +109,10 @@ export async function updateEventSetup(
   if (!parsed.success) return { ok: false, fieldErrors: fieldErrors(parsed.error) };
   const v = parsed.data;
   const formatChanged =
-    v.matchFormat !== event.matchFormat || v.swissRounds !== event.swissRounds || v.cutSize !== event.cutSize;
+    v.matchFormat !== event.matchFormat ||
+    v.swissRounds !== event.swissRounds ||
+    v.cutSize !== event.cutSize ||
+    (v.finale !== undefined && v.finale !== event.finale);
   if (formatChanged && event.status !== "SIGNUP") {
     return { ok: false, error: "Format, Swiss rounds and cut size can only change before the event starts." };
   }
@@ -120,6 +126,7 @@ export async function updateEventSetup(
     startTime: event.startTime,
     venue: event.venue,
     notes: event.notes,
+    finale: event.finale,
   };
   const after = { ...v };
   await db.$transaction(async (tx) => {
@@ -135,6 +142,7 @@ export async function updateEventSetup(
         startTime: orNull(v.startTime),
         venue: orNull(v.venue),
         notes: orNull(v.notes),
+        ...(v.finale !== undefined ? { finale: v.finale } : {}),
         version: { increment: 1 },
       },
     });

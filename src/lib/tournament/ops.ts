@@ -18,7 +18,9 @@ import {
 import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 import { type Actor, audit } from "../audit";
 import { ConflictError, ServiceError } from "./errors";
+import { finaleOrder, seasonStandingsByPlayer } from "./finale";
 import { clearOutcome, recordOutcome } from "./records";
+import { pruneReports } from "./reports";
 import { type LoadedEvent, loadEvent, saveEvent } from "./state";
 
 export type OpResult = { ok: true; state: EventState } | { ok: false; error: string };
@@ -46,6 +48,8 @@ export async function runEventOp(
         throw new ConflictError();
       const next = op(loaded);
       await saveEvent(tx, id.data, loaded.version, next);
+      // Player reports only make sense for games still open in the current pairings.
+      await pruneReports(tx, id.data, next);
       const wasDone = loaded.state.status === "done";
       const isDone = next.status === "done";
       if (isDone && !wasDone) await recordOutcome(tx, loaded, next);
@@ -90,14 +94,36 @@ export function opPairNext(db: PrismaClient, actor: Actor, eventId: unknown, rng
   );
 }
 
-export function opStartCut(db: PrismaClient, actor: Actor, eventId: unknown, rng: Rng, version?: unknown) {
+export async function opStartCut(
+  db: PrismaClient,
+  actor: Actor,
+  eventId: unknown,
+  rng: Rng,
+  version?: unknown,
+) {
+  // Season finale: the cut is seeded from the Season board (finished events so far).
+  const id = typeof eventId === "string" && eventId.length <= 64 ? eventId : null;
+  const ev = id
+    ? await db.event.findUnique({ where: { id }, select: { finale: true, seasonId: true } })
+    : null;
+  const season = ev?.finale ? await seasonStandingsByPlayer(db, ev.seasonId) : null;
   return runEventOp(
     db,
     actor,
     eventId,
     "event.start_cut",
-    (l) => startCut(l.state, l.nameOf, rng),
-    (_l, next) => ({ cutSize: next.cutSize }),
+    (l) =>
+      startCut(
+        l.state,
+        l.nameOf,
+        rng,
+        season ? finaleOrder(l.state, l.nameOf, l.entrants, season) : undefined,
+      ),
+    (l, next) => ({
+      cutSize: next.cutSize,
+      seeding: season ? "season standings (finale)" : "swiss standings",
+      seeds: next.cut[0]?.matches.flatMap((m) => [l.nameOf(m.a), m.b ? l.nameOf(m.b) : "BYE"]) ?? [],
+    }),
     version,
   );
 }

@@ -83,8 +83,12 @@ export function MatchCard({ match, double, table }: { match: MatchView; double: 
     );
   }
   const corpIsA = match.corpId === null ? null : match.corpId === match.a.id;
+  const awaiting = !!match.reports?.reports.length;
   return (
     <div className="space-y-1 py-1">
+      {awaiting && (
+        <p className="font-mono text-[11px] text-warn">⏳ Result reported, awaiting organizer approval</p>
+      )}
       {table !== undefined && (
         <p className="font-mono text-[11px] tracking-widest text-muted uppercase">Table {table}</p>
       )}

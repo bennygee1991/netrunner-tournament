@@ -35,7 +35,7 @@ test("admin creates a season with 4 events", async ({ page }) => {
   await page.getByRole("button", { name: "Create season" }).click();
   await expect(page.getByRole("heading", { name: "E2E Season" })).toBeVisible();
   await expect(page.getByRole("link", { name: /Event 1/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: /Event 4/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Season finale/ })).toBeVisible();
 });
 
 test("visitors see the next event and a register call to action", async ({ page }) => {
@@ -85,7 +85,7 @@ test("admin approves sign-ups, adds walk-ins and sets up the event", async ({ pa
   await page.getByLabel("Venue (optional)").fill("The Hive Game Store");
   await page.getByLabel("Notes for players (optional)").fill("Bring sleeves. Entry is free.");
   await page.getByLabel("Swiss rounds").fill("2");
-  await page.getByLabel("Top cut").selectOption("4");
+  await page.getByLabel("Top cut", { exact: true }).selectOption("4");
   await page.getByRole("button", { name: "Save event" }).click();
   await expect(page.getByText("Event saved.")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Kickoff Clash" })).toBeVisible();
@@ -123,6 +123,25 @@ test("the public event page shows results, bracket and standings", async ({ page
   await expect(page.getByRole("heading", { name: "Final results" })).toBeVisible();
   await expect(page.getByRole("cell", { name: "Champion" })).toBeVisible();
   await expect(page.getByRole("cell", { name: "+10" })).toBeVisible();
+  // Flowchart (default view): rounds as columns, standings, then the cut bracket.
+  const chart = page.getByRole("region", { name: /Tournament flowchart/ });
+  await expect(chart).toBeVisible();
+  for (const name of ["Round 1", "Round 2", "Standings", "Semifinals", "Final"]) {
+    await expect(chart.getByRole("region", { name, exact: true })).toBeVisible();
+  }
+  // Tapping a player highlights all their matches.
+  const firstPlayer = chart.getByRole("region", { name: "Standings" }).getByRole("button").first();
+  await firstPlayer.click();
+  await expect(firstPlayer).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByText(/^Highlighting/)).toBeVisible();
+  const pressed = chart.locator('button[aria-pressed="true"]');
+  expect(await pressed.count()).toBeGreaterThanOrEqual(3); // standings + 2 Swiss rounds (+ cut)
+  await page.getByRole("button", { name: "Clear" }).click();
+  await expect(pressed).toHaveCount(0);
+
+  // List view keeps the classic cards.
+  await page.getByRole("link", { name: "List", exact: true }).click();
+  await expect(page).toHaveURL(/view=list/);
   await expect(page.getByRole("heading", { name: "Top cut" })).toBeVisible();
   await expect(page.getByRole("table", { name: "Swiss standings" })).toBeVisible();
   await page.goto("/events");

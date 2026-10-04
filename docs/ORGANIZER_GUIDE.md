@@ -29,6 +29,13 @@ Open the event from **Admin → Season**. Under **Event setup** you can set:
 
 Format, rounds and cut lock once the event starts.
 
+### The season finale
+
+The last event of each season is created as the **Season finale**: 1 Swiss round, then a top 8
+cut. Players get into the cut by their **Season leaderboard** position, not the Swiss round, and
+are seeded in that order (ties broken by the finale's Swiss round). The event page shows a
+**Cut qualification** table while it runs. League points from the finale count double.
+
 ## 3. Sign-ups
 
 - Players sign up on the home page, after creating an account with their runner name.
@@ -49,7 +56,20 @@ The **Next step** card always shows the one button you need.
 4. After the last Swiss round, tap **Start top 4/8 cut**, or **Finish event** if there's no cut.
 5. In the cut, tap each winner. The next round is paired automatically and the final finishes the event. A tied cut game advances the higher seed.
 
-Players can follow along on the public event page, which refreshes itself every 20 seconds.
+Players can follow along on the public event page, which refreshes itself every 20 seconds. It
+opens on the **Flowchart**: one column per Swiss round showing who plays whom at each table, their
+sides (C = Corp, R = Runner), results and points after the round, then the standings and the top
+cut bracket. Tap a player to highlight all their matches. On phones it scrolls sideways. **List**
+switches to the classic cards.
+
+**Players can report their own results.** During a round, a signed-in player sees a **Your match**
+card on the event page with **I won / Tie / I lost** (per game for double-sided rounds). Reports
+never count by themselves:
+
+- On your admin page each match shows what was reported, or **⚠ Players disagree**.
+- **Approve all agreed results** confirms every reported game in one tap; disagreements are left
+  for you. You can always tap the result yourself instead, which also clears the reports.
+- Reports for a round you restart or undo are discarded automatically.
 
 ## 5. Fixing mistakes
 

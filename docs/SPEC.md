@@ -109,3 +109,12 @@ public, so say "taken"), security headers, admin routes behind role check in mid
   - Milestones (initial set, owner may change): first event played, 10 events played,
     undefeated Swiss (finished an event's Swiss with no game lost).
 - **No email**: no notifications and no email password reset. Password resets are admin-only.
+
+## 10. Season finale (owner decision, 2026-10-04)
+- The last event of a season is the **Season finale** (created automatically; any event can be
+  marked as the finale in setup before it starts).
+- Format: 1 Swiss round for everyone, then a top 8 cut (single elimination until double
+  elimination is built).
+- The cut is decided by the **Season board** (finished events so far): top 8 by season points,
+  then event wins; ties broken by the finale's Swiss standings. Seeds fixed when the cut starts.
+- League points from the finale are doubled on the Month 2 and Season boards.

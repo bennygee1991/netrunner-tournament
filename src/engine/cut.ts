@@ -61,9 +61,15 @@ export function cutSeeds(ev: EventState, nameOf: NameOf): Map<string, number> {
  */
 export function cutSeedIds(ev: EventState, nameOf: NameOf): string[] {
   const dropped = new Set(ev.dropped);
-  const eligible = standings(ev, nameOf)
-    .map((s) => s.id)
-    .filter((id) => !dropped.has(id));
+  const swissOrder = standings(ev, nameOf).map((s) => s.id);
+  // Season finale: season order first; anyone it does not list follows in Swiss order.
+  const order = ev.cutSeedOrder?.length
+    ? [
+        ...ev.cutSeedOrder.filter((id) => ev.entrants.includes(id)),
+        ...swissOrder.filter((id) => !ev.cutSeedOrder!.includes(id)),
+      ]
+    : swissOrder;
+  const eligible = order.filter((id) => !dropped.has(id));
   const n = effectiveCutSize(ev.cutSize, eligible.length);
   return eligible.slice(0, n);
 }

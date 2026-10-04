@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { ActionForm } from "@/components/action-form";
 import { ConfirmSubmit } from "@/components/confirm-submit";
 import { Notice } from "@/components/notice";
+import { FinaleBanner, SeasonSeeding } from "@/components/tournament/season-seeding";
 import { SubmitButton } from "@/components/submit-button";
 import { MatchCard } from "@/components/tournament/match-card";
 import { ResultEntry } from "@/components/tournament/result-entry";
@@ -19,6 +20,7 @@ import { type EventView, getEventView } from "@/lib/tournament/queries";
 import {
   addPlayerAction,
   approveAction,
+  approveReportsAction,
   approveAllAction,
   dropAction,
   finishAction,
@@ -96,6 +98,17 @@ function NextStepCard({ view }: { view: EventView }) {
   return (
     <Card tone="magenta">
       <CardTitle>Next step</CardTitle>
+      {view.agreedReports > 0 && (
+        <ActionForm action={approveReportsAction} fields={fields} className="mb-4">
+          <p className="mb-2 text-sm">
+            Players have reported {view.agreedReports} result{view.agreedReports === 1 ? "" : "s"} that both
+            sides agree on (or that only one player has reported so far).
+          </p>
+          <SubmitButton pendingText="Approving…">
+            Approve all agreed results ({view.agreedReports})
+          </SubmitButton>
+        </ActionForm>
+      )}
       {content}
     </Card>
   );
@@ -389,12 +402,14 @@ export default async function AdminEventPage({ params, searchParams }: PageProps
         <EventStatusBadge status={meta.status} round={view.swiss.length} />
         <span>{eventWhen(meta)}</span>
         <span>Month {meta.month}</span>
-        <span>{formatLine(meta.matchFormat, meta.cutSize)}</span>
+        <span>{formatLine(meta.matchFormat, meta.cutSize, meta.finale)}</span>
         <Link href={`/events/${meta.id}`} className={buttonStyles.link}>
-          Public page
+          Public page &amp; flowchart
         </Link>
       </div>
 
+      {meta.finale && <FinaleBanner />}
+      {view.seasonSeeding && <SeasonSeeding rows={view.seasonSeeding} fixed={view.cut.length > 0} />}
       <Notice code={sp.notice} />
       <NextStepCard view={view} />
       <Rounds view={view} repair={repair} />
@@ -412,7 +427,7 @@ export default async function AdminEventPage({ params, searchParams }: PageProps
           <StandingsTable
             standings={view.standings}
             nameOf={view.loaded.nameOf}
-            cutSize={meta.cutSize}
+            cutSize={meta.finale ? 0 : meta.cutSize}
             double={double}
             dropped={new Set(view.loaded.state.dropped)}
           />
@@ -436,6 +451,7 @@ export default async function AdminEventPage({ params, searchParams }: PageProps
             startTime: meta.startTime ?? "",
             venue: meta.venue ?? "",
             notes: meta.notes ?? "",
+            finale: meta.finale,
           }}
           locked={meta.status !== "SIGNUP"}
           autoRounds={meta.effectiveSwissRounds}

@@ -23,6 +23,7 @@ const LABELS: Record<string, string> = {
   "event.start_swiss": "Started Swiss",
   "event.pair_round": "Paired round",
   "event.result": "Entered result",
+  "event.approve_reports": "Approved reported results",
   "event.start_cut": "Started cut",
   "event.finish": "Finished event",
   "event.restart_round": "Restarted round",

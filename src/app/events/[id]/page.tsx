@@ -4,11 +4,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { LiveRefresh } from "@/components/live-refresh";
 import { MatchCard } from "@/components/tournament/match-card";
+import { MyMatch } from "@/components/tournament/my-match";
+import { myOpenMatch } from "@/lib/tournament/my-match";
+import { FinaleBanner, SeasonSeeding } from "@/components/tournament/season-seeding";
 import { ResultsTable } from "@/components/tournament/results-table";
 import { SignupButton } from "@/components/tournament/signup-button";
+import { TournamentChart } from "@/components/tournament/tournament-chart";
 import { StandingsTable } from "@/components/tournament/standings-table";
 import { EventStatusBadge, formatLine } from "@/components/tournament/status-badge";
-import { Card, CardTitle, PageTitle, buttonStyles } from "@/components/ui";
+import { Card, CardTitle, PageTitle, buttonStyles, cx } from "@/components/ui";
 import { getCurrentUser } from "@/lib/auth/server";
 import { db } from "@/lib/db";
 import { getEventView } from "@/lib/tournament/queries";
@@ -19,8 +23,9 @@ export async function generateMetadata({ params }: PageProps<"/events/[id]">): P
   return { title: ev?.name ?? "Event" };
 }
 
-export default async function EventPage({ params }: PageProps<"/events/[id]">) {
+export default async function EventPage({ params, searchParams }: PageProps<"/events/[id]">) {
   const { id } = await params;
+  const listView = (await searchParams).view === "list";
   const [view, user] = await Promise.all([getEventView(db, id), getCurrentUser()]);
   if (!view) notFound();
   const { meta } = view;
@@ -28,6 +33,11 @@ export default async function EventPage({ params }: PageProps<"/events/[id]">) {
   const live = meta.status === "SWISS" || meta.status === "CUT";
   const profiles = new Map(view.entrants.map((e) => [e.id, e.userId ? e.name : null]));
   const profileOf = (id: string) => profiles.get(id) ?? null;
+  const myMatch = myOpenMatch(view, user?.id);
+  const standingsCut =
+    meta.status === "SWISS" || meta.status === "CUT" || meta.status === "DONE" ? meta.cutSize : 0;
+  const dropped = new Set(view.loaded.state.dropped);
+  const hasRounds = view.swiss.length > 0;
   const signedUp = user ? (await db.signup.count({ where: { eventId: id, userId: user.id } })) > 0 : false;
 
   return (
@@ -45,10 +55,13 @@ export default async function EventPage({ params }: PageProps<"/events/[id]">) {
         )}
       </div>
       <p className="mb-4 font-mono text-xs text-muted">
-        {formatLine(meta.matchFormat, meta.cutSize)}
+        {formatLine(meta.matchFormat, meta.cutSize, meta.finale)}
         {meta.cutSize === 8 &&
           " · single elimination (house rule; official top 8 cuts are double elimination)"}
       </p>
+
+      {meta.finale && <FinaleBanner />}
+      {myMatch && <MyMatch {...myMatch} />}
 
       {meta.notes && (
         <Card>
@@ -98,57 +111,111 @@ export default async function EventPage({ params }: PageProps<"/events/[id]">) {
         </Card>
       )}
 
-      {view.cut.length > 0 && (
-        <Card tone="warn">
-          <CardTitle>Top cut</CardTitle>
-          {[...view.cut].reverse().map((r) => (
-            <section key={r.index} className="mb-3">
-              <h3 className="mb-1 font-mono text-sm tracking-widest text-magenta uppercase">{r.label}</h3>
-              {r.matches.map((m) => (
-                <MatchCard key={m.index} match={m} double={false} />
-              ))}
-            </section>
-          ))}
-        </Card>
+      {hasRounds && (
+        <nav aria-label="Rounds view" className="mb-3 flex gap-2 font-mono text-sm">
+          <Link
+            href={`/events/${meta.id}`}
+            aria-current={!listView ? "page" : undefined}
+            className={cx(
+              "rounded border px-3 py-1",
+              !listView ? "border-cyan text-cyan" : "border-border text-muted",
+            )}
+          >
+            Flowchart
+          </Link>
+          <Link
+            href={`/events/${meta.id}?view=list`}
+            aria-current={listView ? "page" : undefined}
+            className={cx(
+              "rounded border px-3 py-1",
+              listView ? "border-cyan text-cyan" : "border-border text-muted",
+            )}
+          >
+            List
+          </Link>
+        </nav>
       )}
 
-      {view.swiss.length > 0 && (
-        <Card>
-          <CardTitle>
-            Swiss · {view.swiss.length} of {meta.effectiveSwissRounds} rounds
-          </CardTitle>
-          {[...view.swiss].reverse().map((r, i) => (
-            <details
-              key={r.index}
-              open={i === 0 && meta.status === "SWISS"}
-              className="border-t border-border py-2"
-            >
-              <summary className="cursor-pointer font-mono text-sm tracking-widest text-muted uppercase">
-                {r.label}
-                {!r.complete && " · in progress"}
-              </summary>
-              {r.matches.map((m) => (
-                <MatchCard key={m.index} match={m} double={double} table={m.b ? m.index + 1 : undefined} />
+      {hasRounds && !listView ? (
+        <>
+          <Card>
+            <CardTitle>Flowchart</CardTitle>
+            <TournamentChart
+              swiss={view.swiss}
+              cut={view.cut}
+              double={double}
+              pointsAfter={view.pointsAfter}
+              standings={view.standings.map((s) => ({
+                id: s.id,
+                name: dropped.has(s.id) ? `${view.loaded.nameOf(s.id)} (dropped)` : view.loaded.nameOf(s.id),
+                rank: s.rank,
+                points: s.points,
+                inCut: !meta.finale && standingsCut > 0 && s.rank <= standingsCut,
+              }))}
+              cutSize={meta.finale ? 0 : standingsCut}
+            />
+          </Card>
+          {view.seasonSeeding && <SeasonSeeding rows={view.seasonSeeding} fixed={view.cut.length > 0} />}
+        </>
+      ) : (
+        <>
+          {view.cut.length > 0 && (
+            <Card tone="warn">
+              <CardTitle>Top cut</CardTitle>
+              {[...view.cut].reverse().map((r) => (
+                <section key={r.index} className="mb-3">
+                  <h3 className="mb-1 font-mono text-sm tracking-widest text-magenta uppercase">{r.label}</h3>
+                  {r.matches.map((m) => (
+                    <MatchCard key={m.index} match={m} double={false} />
+                  ))}
+                </section>
               ))}
-            </details>
-          ))}
-        </Card>
-      )}
+            </Card>
+          )}
 
-      {view.standings.length > 0 && (
-        <Card>
-          <CardTitle>Standings</CardTitle>
-          <StandingsTable
-            standings={view.standings}
-            nameOf={view.loaded.nameOf}
-            profileOf={profileOf}
-            cutSize={
-              meta.status === "SWISS" || meta.status === "CUT" || meta.status === "DONE" ? meta.cutSize : 0
-            }
-            double={double}
-            dropped={new Set(view.loaded.state.dropped)}
-          />
-        </Card>
+          {view.swiss.length > 0 && (
+            <Card>
+              <CardTitle>
+                Swiss · {view.swiss.length} of {meta.effectiveSwissRounds} rounds
+              </CardTitle>
+              {[...view.swiss].reverse().map((r, i) => (
+                <details
+                  key={r.index}
+                  open={i === 0 && meta.status === "SWISS"}
+                  className="border-t border-border py-2"
+                >
+                  <summary className="cursor-pointer font-mono text-sm tracking-widest text-muted uppercase">
+                    {r.label}
+                    {!r.complete && " · in progress"}
+                  </summary>
+                  {r.matches.map((m) => (
+                    <MatchCard
+                      key={m.index}
+                      match={m}
+                      double={double}
+                      table={m.b ? m.index + 1 : undefined}
+                    />
+                  ))}
+                </details>
+              ))}
+            </Card>
+          )}
+
+          {view.standings.length > 0 && (
+            <Card>
+              <CardTitle>Standings</CardTitle>
+              <StandingsTable
+                standings={view.standings}
+                nameOf={view.loaded.nameOf}
+                profileOf={profileOf}
+                cutSize={standingsCut}
+                double={double}
+                dropped={dropped}
+              />
+            </Card>
+          )}
+          {view.seasonSeeding && <SeasonSeeding rows={view.seasonSeeding} fixed={view.cut.length > 0} />}
+        </>
       )}
     </>
   );

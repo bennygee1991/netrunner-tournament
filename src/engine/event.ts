@@ -166,6 +166,7 @@ export function undoRound(ev: EventState, phase: Phase): EventState {
   if (next.cut.length > 1) next.cut.pop();
   else {
     next.cut = [];
+    delete next.cutSeedOrder;
     next.status = "swiss";
   }
   return next;
@@ -218,9 +219,15 @@ export function setResult(ev: EventState, input: ResultInput, nameOf: NameOf, rn
   return next;
 }
 
-export function startCut(ev: EventState, nameOf: NameOf, rng: Rng): EventState {
+/**
+ * Starts the top cut. `seedOrder` (season finale) seeds the cut from that order of entrants instead
+ * of the Swiss standings; it is kept on the event so later cut rounds and ties use the same seeds.
+ */
+export function startCut(ev: EventState, nameOf: NameOf, rng: Rng, seedOrder?: string[]): EventState {
   if (nextStep(ev) !== "start-cut") fail("Finish all Swiss rounds before starting the cut.");
   const next = clone(ev);
+  if (seedOrder) next.cutSeedOrder = [...seedOrder];
+  else delete next.cutSeedOrder;
   const first = firstCutRound(next, nameOf, rng);
   if (first.matches.length === 0) fail("Not enough players for a cut.");
   next.cut = [first];
@@ -244,5 +251,7 @@ export function reopenEvent(ev: EventState): EventState {
 
 /** Reset a single event back to sign-up, keeping its entrants. */
 export function resetEvent(ev: EventState): EventState {
-  return { ...clone(ev), rounds: [], cut: [], status: "signup" };
+  const next: EventState = { ...clone(ev), rounds: [], cut: [], status: "signup" };
+  delete next.cutSeedOrder;
+  return next;
 }
