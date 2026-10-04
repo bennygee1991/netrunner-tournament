@@ -29,7 +29,15 @@ export async function getProfile(db: PrismaClient, runnerName: string) {
   if (runnerName.length > 64) return null;
   const user = await db.user.findUnique({
     where: { runnerNameLower: runnerNameKey(runnerName) },
-    select: { id: true, runnerName: true, bio: true, role: true, createdAt: true, disabledAt: true },
+    select: {
+      id: true,
+      runnerName: true,
+      bio: true,
+      avatar: true,
+      role: true,
+      createdAt: true,
+      disabledAt: true,
+    },
   });
   if (!user || user.disabledAt) return null;
 

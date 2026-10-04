@@ -5,13 +5,14 @@ import type { SessionUser } from "@/lib/auth/sessions";
 const NAV = [
   { href: "/events", label: "Events" },
   { href: "/leaderboards", label: "Boards" },
+  { href: "/players", label: "Players" },
   { href: "/rules", label: "Rules" },
   { href: "/guides", label: "Guides" },
 ] as const;
 
 /**
- * Two rows on phones (logo + account, then navigation), one row from the sm breakpoint.
- * Runner names are truncated so long names never push the layout sideways.
+ * Row 1: logo, then account (name + log out) or log in / register.
+ * Row 2 on phones (inline from sm): the section links.
  */
 export function SiteHeader({ user }: { user: SessionUser | null }) {
   return (
@@ -25,13 +26,20 @@ export function SiteHeader({ user }: { user: SessionUser | null }) {
 
         <div className="ml-auto flex min-w-0 items-center gap-3 font-mono text-sm sm:order-last">
           {user ? (
-            <Link
-              href="/account"
-              className="max-w-[10rem] truncate text-cyan hover:underline"
-              title="Your account"
-            >
-              {user.runnerName}
-            </Link>
+            <>
+              <Link
+                href="/account"
+                className="max-w-[9rem] truncate text-cyan hover:underline"
+                title="Your account"
+              >
+                {user.runnerName}
+              </Link>
+              <form action={logoutAction}>
+                <button type="submit" className="text-muted hover:text-danger">
+                  Log out
+                </button>
+              </form>
+            </>
           ) : (
             <>
               <Link href="/login" className="text-cyan hover:underline">
@@ -45,7 +53,7 @@ export function SiteHeader({ user }: { user: SessionUser | null }) {
         </div>
 
         <nav aria-label="Main" className="w-full sm:w-auto">
-          <ul className="flex items-center gap-x-4 font-mono text-sm">
+          <ul className="flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-sm">
             {NAV.map((item) => (
               <li key={item.href}>
                 <Link href={item.href} className="text-muted hover:text-cyan">
@@ -58,15 +66,6 @@ export function SiteHeader({ user }: { user: SessionUser | null }) {
                 <Link href="/admin" className="text-magenta hover:text-cyan">
                   Admin
                 </Link>
-              </li>
-            )}
-            {user && (
-              <li className="ml-auto sm:ml-0">
-                <form action={logoutAction}>
-                  <button type="submit" className="text-muted hover:text-danger">
-                    Log out
-                  </button>
-                </form>
               </li>
             )}
           </ul>

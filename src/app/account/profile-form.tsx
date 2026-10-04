@@ -3,6 +3,8 @@
 import { useActionState } from "react";
 import { SubmitButton } from "@/components/submit-button";
 import { Field, FormMessage } from "@/components/ui";
+import { Avatar } from "@/components/avatar";
+import { AVATAR_KEYS, avatarLabel } from "@/lib/avatars";
 import { initialFormState } from "@/lib/forms/state";
 import { updateProfileAction } from "./actions";
 
@@ -12,13 +14,60 @@ const THEMES = [
   { value: "light", label: "Light" },
 ] as const;
 
-export function ProfileForm({ theme, email, bio }: { theme: string; email: string; bio: string }) {
+export function ProfileForm({
+  theme,
+  email,
+  bio,
+  avatar,
+  userId,
+}: {
+  theme: string;
+  email: string;
+  bio: string;
+  avatar: string;
+  userId: string;
+}) {
   const [state, action] = useActionState(updateProfileAction, initialFormState);
   const fe = state.fieldErrors ?? {};
   const currentTheme = state.values?.theme ?? theme;
+  const currentAvatar = state.values?.avatar ?? avatar;
   return (
     <form action={action} noValidate>
       {state.message && <FormMessage tone="ok">{state.message}</FormMessage>}
+      <fieldset className="mb-4">
+        <legend className="mb-2 font-mono text-xs tracking-widest text-muted uppercase">Avatar</legend>
+        <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+          <label className="flex cursor-pointer flex-col items-center gap-1 rounded border border-border p-1 has-[:checked]:border-cyan has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-cyan">
+            <input
+              type="radio"
+              name="avatar"
+              value=""
+              defaultChecked={currentAvatar === ""}
+              className="sr-only"
+            />
+            <Avatar avatar={null} seed={userId} size={48} />
+            <span className="font-mono text-[10px] text-muted uppercase">Auto</span>
+          </label>
+          {AVATAR_KEYS.map((key) => (
+            <label
+              key={key}
+              title={avatarLabel(key)}
+              className="flex cursor-pointer items-center justify-center rounded border border-border p-1 has-[:checked]:border-cyan has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-cyan"
+            >
+              <input
+                type="radio"
+                name="avatar"
+                value={key}
+                defaultChecked={currentAvatar === key}
+                className="sr-only"
+                aria-label={avatarLabel(key)}
+              />
+              <Avatar avatar={key} seed={userId} size={48} />
+            </label>
+          ))}
+        </div>
+        {fe.avatar && <p className="mt-1 text-sm text-danger">{fe.avatar}</p>}
+      </fieldset>
       <fieldset className="mb-4">
         <legend className="mb-2 font-mono text-xs tracking-widest text-muted uppercase">Theme</legend>
         <div className="flex flex-wrap gap-2">

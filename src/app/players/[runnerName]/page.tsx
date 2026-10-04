@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Avatar } from "@/components/avatar";
 import { Badge, Card, CardTitle, PageTitle } from "@/components/ui";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/format";
@@ -26,7 +28,10 @@ export default async function PlayerPage({ params }: PageProps<"/players/[runner
 
   return (
     <>
-      <PageTitle kicker="runner">{user.runnerName}</PageTitle>
+      <div className="mb-2 flex items-center gap-4">
+        <Avatar avatar={user.avatar} seed={user.id} size={72} />
+        <PageTitle kicker="runner">{user.runnerName}</PageTitle>
+      </div>
       <p className="mb-4 font-mono text-xs text-muted">
         Member since {formatDate(user.createdAt)}{" "}
         {user.role === "ADMIN" && <Badge tone="cyan">Organizer</Badge>}
@@ -35,6 +40,11 @@ export default async function PlayerPage({ params }: PageProps<"/players/[runner
 
       <Card tone="warn">
         <CardTitle>Trophy cabinet</CardTitle>
+        <p className="mb-3 text-sm">
+          <Link href="/trophies" className="text-cyan underline">
+            See every trophy in the Hall of champions
+          </Link>
+        </p>
         {cabinet.length === 0 ? (
           <p className="text-muted">No trophies yet. Play an event to earn the first one.</p>
         ) : (
