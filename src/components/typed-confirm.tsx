@@ -53,8 +53,14 @@ export function TypedConfirmForm({
           autoComplete="off"
           autoCapitalize="none"
           spellCheck={false}
+          aria-describedby={`${id}-hint`}
           className="min-h-11 rounded border border-border bg-bg px-3 py-2 font-mono text-base text-fg focus:border-danger"
         />
+        <p id={`${id}-hint`} className="text-xs text-muted" aria-live="polite">
+          {typed.trim() === phrase
+            ? "Matches. You can press the button now."
+            : `The button stays off until you type exactly: ${phrase} (capital letters and spaces count).`}
+        </p>
       </div>
       <SubmitButton variant="danger" disabled={typed.trim() !== phrase} pendingText="Working…">
         {buttonText}

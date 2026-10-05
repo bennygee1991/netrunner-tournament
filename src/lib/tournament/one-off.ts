@@ -48,20 +48,17 @@ export async function createOneOffEvent(
 
 /**
  * Deletes a one-off event with its entrants, rounds, results, records and trophies. Season events
- * cannot be deleted this way (they go when the season is archived). Requires typing the event name.
+ * cannot be deleted this way (they go when the season is archived). The admin page asks for a
+ * second tap before calling this; it is audited.
  */
 export async function deleteOneOffEvent(
   db: PrismaClient,
   actor: Actor,
   eventId: unknown,
-  confirmation: unknown,
 ): Promise<{ ok: true; message: string } | Fail> {
   const id = z.string().min(1).max(64).safeParse(eventId);
   const event = id.success ? await db.event.findUnique({ where: { id: id.data } }) : null;
   if (!event || event.seasonId !== null) return { ok: false, error: "One-off event not found." };
-  if (typeof confirmation !== "string" || confirmation.trim() !== event.name) {
-    return { ok: false, error: `Type the event name "${event.name}" exactly to confirm.` };
-  }
   await db.$transaction(async (tx) => {
     await clearOutcome(tx, event.id);
     await tx.event.delete({ where: { id: event.id } });

@@ -417,19 +417,13 @@ function DeleteOneOffCard({ meta }: { meta: EventView["meta"] }) {
   return (
     <Card tone="danger">
       <CardTitle>Delete this one-off event</CardTitle>
-      <TypedConfirmForm
-        id="delete-one-off"
-        action={deleteOneOffAction}
-        phrase={meta.name}
-        fields={{ eventId: meta.id }}
-        label={`Type "${meta.name}" to delete this event`}
-        buttonText="Delete event"
-      >
-        <p className="mb-2 text-sm text-muted">
+      <ActionForm action={deleteOneOffAction} fields={{ eventId: meta.id }}>
+        <p className="mb-3 text-sm text-muted">
           Removes the event, its entrants, results, and the records and trophies it gave out. This cannot be
           undone.
         </p>
-      </TypedConfirmForm>
+        <ConfirmSubmit>Delete event</ConfirmSubmit>
+      </ActionForm>
     </Card>
   );
 }

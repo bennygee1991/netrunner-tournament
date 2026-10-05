@@ -68,14 +68,17 @@ test("organizer creates a double-sided one-off, runs it with the clock, and it g
   await expect(page.getByText("🎪 Midnight Masters")).toBeVisible();
 });
 
-test("a one-off event can be deleted with its typed name", async ({ page }) => {
+test("a one-off event can be deleted with a two-tap button", async ({ page }) => {
   await loginOk(page, E2E_ADMIN.runnerName, E2E_ADMIN.password);
   await page.goto("/admin/events");
   await page.getByLabel("Event name").fill("Cancelled Cup");
   await page.getByRole("button", { name: "Create one-off event" }).click();
   await expect(page.getByText(/One-off event created/)).toBeVisible();
-  await page.getByLabel('Type "Cancelled Cup" to delete this event').fill("Cancelled Cup");
+  // First tap only arms the button; nothing is deleted yet.
   await page.getByRole("button", { name: "Delete event" }).click();
+  await expect(page.getByRole("button", { name: "Tap again to confirm" })).toBeVisible();
+  await expect(page).not.toHaveURL(/notice=event-deleted/);
+  await page.getByRole("button", { name: "Tap again to confirm" }).click();
   await expect(page).toHaveURL(/notice=event-deleted/);
   await expect(page.getByText("Event deleted.")).toBeVisible();
   await expect(page.getByRole("link", { name: /Cancelled Cup/ })).toHaveCount(0);

@@ -96,18 +96,18 @@ describe.skipIf(!hasTestDb)("one-off events (database)", () => {
     expect(hall.eventChampions).toHaveLength(0);
   });
 
-  it("deleting needs the typed name and removes results; season events cannot be deleted; reset-all removes one-offs", async () => {
+  it("deleting removes the event and its results; season events cannot be deleted; reset-all removes one-offs", async () => {
     const r = await create();
     if (!r.ok) throw new Error();
-    expect(await deleteOneOffEvent(db, admin, r.eventId, "nope")).toMatchObject({ ok: false });
-    expect(await deleteOneOffEvent(db, admin, r.eventId, "Store championship")).toMatchObject({ ok: true });
+    expect(await deleteOneOffEvent(db, admin, "no-such-event")).toMatchObject({ ok: false });
+    expect(await deleteOneOffEvent(db, admin, r.eventId)).toMatchObject({ ok: true });
     expect(await db.event.count()).toBe(0);
     expect(await db.auditLog.count({ where: { action: "event.delete_one_off" } })).toBe(1);
 
     const s = await createSeason(db, admin, { name: "S", firstDate: "2026-12-05" });
     if (!s.ok) throw new Error();
     const seasonEvent = await db.event.findFirstOrThrow({ where: { seasonId: s.seasonId } });
-    expect(await deleteOneOffEvent(db, admin, seasonEvent.id, seasonEvent.name)).toMatchObject({ ok: false });
+    expect(await deleteOneOffEvent(db, admin, seasonEvent.id)).toMatchObject({ ok: false });
 
     await create();
     expect(await resetEverything(db, admin, "RESET", false)).toMatchObject({ ok: true });
