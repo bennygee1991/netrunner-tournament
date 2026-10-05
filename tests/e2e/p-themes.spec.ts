@@ -5,6 +5,10 @@ import { register, uniqueName } from "./fixtures";
 // Every selectable site theme must keep every page readable (WCAG 2.1 AA, including colour
 // contrast). Runs after event-flow (so there is an event with a flowchart) and before repair.
 test.setTimeout(240_000);
+// Buttons fade their colours over 150ms. Switching the theme and scanning straight away would catch
+// them half-way (old text colour on the new background), a false contrast failure that only showed
+// up on slower CI runs. Reduced motion turns the fades off (see globals.css), like a real device setting.
+test.use({ reducedMotion: "reduce" });
 
 const THEMES = [
   "synthwave",
