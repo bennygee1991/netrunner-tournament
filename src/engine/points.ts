@@ -28,8 +28,8 @@ export function eventResults(ev: EventState, nameOf: NameOf): Map<string, EventR
     for (const r of ev.cut) {
       const n = r.matches.length;
       for (const m of r.matches) {
-        const w = cutWinner(m, seeds);
-        const l = cutLoser(m, seeds);
+        const w = cutWinner(m, seeds, ev.cutFormat);
+        const l = cutLoser(m, seeds, ev.cutFormat);
         if (w === null || l === null) continue;
         if (n === 1) {
           out.set(w, { points: EVENT_POINTS.champion, label: "Champion", rank: 1 });

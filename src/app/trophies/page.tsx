@@ -58,6 +58,7 @@ export default async function TrophiesPage() {
           ["#seasons", "Season champions"],
           ["#months", "Month champions"],
           ["#events", "Event champions"],
+          ["#one-offs", "One-off champions"],
           ["#badges", "Badges"],
         ].map(([href, label]) => (
           <a key={href} href={href} className="rounded border border-border px-2 py-1 hover:border-cyan">
@@ -134,6 +135,22 @@ export default async function TrophiesPage() {
                   <br />
                   {e.seasonName}
                 </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      <Card tone="warn" id="one-offs" className="scroll-mt-20">
+        <CardTitle>One-off champions</CardTitle>
+        {hall.oneOffChampions.length === 0 ? (
+          <p className="text-muted">Awarded when a one-off event finishes.</p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {hall.oneOffChampions.map((e) => (
+              <li key={e.id} className="flex items-center justify-between gap-3 py-2">
+                <Who p={e.player} />
+                <span className="shrink-0 text-right font-mono text-xs text-muted">🎪 {e.eventName}</span>
               </li>
             ))}
           </ul>

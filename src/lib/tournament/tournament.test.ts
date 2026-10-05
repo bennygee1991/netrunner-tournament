@@ -54,11 +54,22 @@ describe.skipIf(!hasTestDb)("tournament services (database)", () => {
   describe("seasons", () => {
     it("creates 4 events two weeks apart with months 1,1,2,2 and logs it", async () => {
       const events = await newSeason();
-      expect(events.map((e) => [e.name, toIsoDate(e.date), e.month, e.status, e.cutSize])).toEqual([
-        ["Event 1", "2026-10-10", 1, "SIGNUP", 4],
-        ["Event 2", "2026-10-24", 1, "SIGNUP", 4],
-        ["Event 3", "2026-11-07", 2, "SIGNUP", 4],
-        ["Season finale", "2026-11-21", 2, "SIGNUP", 8],
+      // League format: events 1-3 Swiss only (3 rounds), the finale adds a top 4 series cut.
+      expect(
+        events.map((e) => [
+          e.name,
+          toIsoDate(e.date),
+          e.month,
+          e.status,
+          e.swissRounds,
+          e.cutSize,
+          e.cutFormat,
+        ]),
+      ).toEqual([
+        ["Event 1", "2026-10-10", 1, "SIGNUP", 3, 0, "SINGLE"],
+        ["Event 2", "2026-10-24", 1, "SIGNUP", 3, 0, "SINGLE"],
+        ["Event 3", "2026-11-07", 2, "SIGNUP", 3, 0, "SINGLE"],
+        ["Season finale", "2026-11-21", 2, "SIGNUP", 3, 4, "SERIES"],
       ]);
       expect(await db.auditLog.count({ where: { action: "season.create" } })).toBe(1);
     });
@@ -155,8 +166,12 @@ describe.skipIf(!hasTestDb)("tournament services (database)", () => {
 
     it("prizes are saved and audited", async () => {
       const [e1] = await newSeason();
-      await updatePrizes(db, admin, e1!.seasonId, { month1: "Playmat", month2: "Alt art", season: "Trophy" });
-      const s = await db.season.findUniqueOrThrow({ where: { id: e1!.seasonId } });
+      await updatePrizes(db, admin, e1!.seasonId!, {
+        month1: "Playmat",
+        month2: "Alt art",
+        season: "Trophy",
+      });
+      const s = await db.season.findUniqueOrThrow({ where: { id: e1!.seasonId! } });
       expect(readPrizes(s.prizesJson)).toEqual({ month1: "Playmat", month2: "Alt art", season: "Trophy" });
       expect(await db.auditLog.count({ where: { action: "season.prizes" } })).toBe(1);
     });
@@ -255,6 +270,8 @@ describe.skipIf(!hasTestDb)("tournament services (database)", () => {
   describe("running an event", () => {
     it("runs a 6-player event with a top 4 cut end to end and writes records and trophies", async () => {
       const [e1] = await newSeason();
+      // Classic setup: automatic Swiss rounds and a single-game top 4 cut.
+      await db.event.update({ where: { id: e1!.id }, data: { swissRounds: null, cutSize: 4 } });
       await makeUsers(5);
       for (let i = 1; i <= 5; i++) await addPlayerByName(db, admin, e1!.id, `Runner ${i}`);
       await addPlayerByName(db, admin, e1!.id, "Guest Gary");

@@ -7,12 +7,51 @@ import { Card, CardTitle, buttonStyles } from "@/components/ui";
 import { getCurrentUser } from "@/lib/auth/server";
 import { db } from "@/lib/db";
 import { formatDay } from "@/lib/tournament/dates";
+import { listOneOffEvents } from "@/lib/tournament/one-off";
 import { getHomeData } from "@/lib/tournament/queries";
 
 export default async function HomePage({ searchParams }: PageProps<"/">) {
   const { notice } = await searchParams;
   const user = await getCurrentUser();
-  const home = await getHomeData(db, user?.id ?? null);
+  const [home, oneOffs] = await Promise.all([getHomeData(db, user?.id ?? null), listOneOffEvents(db)]);
+  const mySignups = user
+    ? new Set(
+        (
+          await db.signup.findMany({
+            where: { userId: user.id, eventId: { in: oneOffs.upcoming.map((e) => e.id) } },
+            select: { eventId: true },
+          })
+        ).map((s) => s.eventId),
+      )
+    : new Set<string>();
+  const oneOffCard = oneOffs.upcoming.length > 0 && (
+    <Card tone="warn">
+      <CardTitle>One-off events</CardTitle>
+      <p className="mb-2 text-sm text-muted">
+        Special events outside the season: no league points, own trophies.
+      </p>
+      <ul className="divide-y divide-border" aria-label="Upcoming one-off events">
+        {oneOffs.upcoming.map((e) => (
+          <li key={e.id} className="py-3">
+            <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
+              <Link href={`/events/${e.id}`} className="text-lg font-semibold hover:text-cyan">
+                {e.name}
+              </Link>
+              <span className="font-mono text-sm text-muted">{eventWhen(e)}</span>
+            </div>
+            <p className="mb-2 font-mono text-xs text-muted">
+              {formatLine(e.matchFormat, e.cutSize, false, e.cutFormat)}
+            </p>
+            {user && e.status === "SIGNUP" ? (
+              <SignupButton eventId={e.id} eventName={e.name} signedUp={mySignups.has(e.id)} />
+            ) : (
+              <EventStatusBadge status={e.status} />
+            )}
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
 
   return (
     <>
@@ -29,6 +68,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         </p>
       </section>
 
+      {!home && oneOffCard}
       {!home ? (
         <Card>
           <CardTitle>Sign-ups open soon</CardTitle>
@@ -56,7 +96,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
               </h2>
               <p className="mb-2 font-mono text-sm">{eventWhen(home.next)}</p>
               <p className="font-mono text-xs text-muted">
-                {formatLine(home.next.matchFormat, home.next.cutSize, home.next.finale)}
+                {formatLine(home.next.matchFormat, home.next.cutSize, home.next.finale, home.next.cutFormat)}
               </p>
               <div className="mt-4 flex flex-wrap gap-3">
                 <Link href={`/events/${home.next.id}`} className={buttonStyles.secondary}>
@@ -135,6 +175,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
               )}
             </Card>
           ))}
+          {oneOffCard}
         </>
       )}
     </>

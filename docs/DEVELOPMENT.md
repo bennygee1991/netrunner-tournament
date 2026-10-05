@@ -58,5 +58,5 @@ pnpm dev                      # http://localhost:3000
 
 ## Next milestone
 
-Double-elimination top cut (NSG Organized Play Policies 1.1.11.2-1.1.11.4), replacing the
-single-elimination top 8 house rule.
+None planned. If the league ever wants official-style cuts: double elimination (NSG Organized Play
+Policies 1.1.11.2-1.1.11.4). The league's own cut is the single-elimination series format.

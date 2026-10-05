@@ -60,7 +60,7 @@ test("the rules page is generated from the engine rules", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Who plays Corp or Runner?" })).toBeVisible();
   await expect(page.getByText("Each game: win 3 · tie 1 · loss 0.")).toBeVisible();
   await expect(page.getByText(/champion 10 · finalist 7 · top 4 5 · top 8 3/)).toBeVisible();
-  await expect(page.getByText(/higher seed advances/)).toBeVisible();
+  await expect(page.getByText(/higher seed advances/).first()).toBeVisible();
   await page.getByRole("link", { name: "Trophies" }).click();
   await expect(page).toHaveURL(/#trophies$/);
 });

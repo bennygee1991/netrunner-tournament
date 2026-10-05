@@ -1,6 +1,6 @@
 import { coinFlip } from "./rng";
 import { standings } from "./standings";
-import type { EventState, Match, NameOf, Rng, Round, Side } from "./types";
+import type { CutFormat, EventState, Match, NameOf, Rng, Round, Side } from "./types";
 
 /** Bracket seed order, e.g. 8 -> [1, 8, 4, 5, 2, 7, 3, 6]. */
 export function seedOrder(n: number): number[] {
@@ -62,19 +62,15 @@ export function cutSeeds(ev: EventState, nameOf: NameOf): Map<string, number> {
 export function cutSeedIds(ev: EventState, nameOf: NameOf): string[] {
   const dropped = new Set(ev.dropped);
   const swissOrder = standings(ev, nameOf).map((s) => s.id);
-  // Season finale: season order first; anyone it does not list follows in Swiss order.
-  const order = ev.cutSeedOrder?.length
-    ? [
-        ...ev.cutSeedOrder.filter((id) => ev.entrants.includes(id)),
-        ...swissOrder.filter((id) => !ev.cutSeedOrder!.includes(id)),
-      ]
-    : swissOrder;
-  const eligible = order.filter((id) => !dropped.has(id));
+  const eligible = swissOrder.filter((id) => !dropped.has(id));
   const n = effectiveCutSize(ev.cutSize, eligible.length);
   return eligible.slice(0, n);
 }
 
-/** First cut round in bracket order (1v8, 4v5, 2v7, 3v6), sides random. */
+/**
+ * First cut round in bracket order (1v8, 4v5, 2v7, 3v6). Single-game cuts get random sides;
+ * series cuts wait for the higher seed to pick.
+ */
 export function firstCutRound(ev: EventState, nameOf: NameOf, rng: Rng): Round {
   const seeds = cutSeedIds(ev, nameOf);
   const n = seeds.length;
@@ -83,47 +79,81 @@ export function firstCutRound(ev: EventState, nameOf: NameOf, rng: Rng): Round {
   for (let i = 0; i < n; i += 2) {
     const a = seeds[order[i]! - 1]!;
     const b = seeds[order[i + 1]! - 1]!;
+    if (ev.cutFormat === "series") matches.push(seriesMatch(a, b));
     // Sides in the first cut round are always random (no earlier cut games).
-    matches.push({ a, b, corp: cutSide([], a, b, rng), g1: null, g2: null });
+    else matches.push({ a, b, corp: cutSide([], a, b, rng), g1: null, g2: null });
   }
   return { matches };
 }
 
-/**
- * Winner of a cut game. A tie advances the higher seed (Rules page; NSG cut games cannot end
- * tied in practice, the organizer records the higher seed if it happens).
- */
-export function cutWinner(m: Match, seeds: Map<string, number>): string | null {
-  if (m.b === null) return m.a;
-  if (m.g1 === "A") return m.a;
-  if (m.g1 === "B") return m.b;
-  if (m.g1 === "D") {
-    const sa = seeds.get(m.a) ?? Infinity;
-    const sb = seeds.get(m.b) ?? Infinity;
-    return sa <= sb ? m.a : m.b;
-  }
-  return null;
+function seriesMatch(a: string, b: string): Match {
+  return { a, b, corp: null, g1: null, g2: null, g3: null, corp3: null };
 }
 
-export function cutLoser(m: Match, seeds: Map<string, number>): string | null {
-  const w = cutWinner(m, seeds);
+/** Series cut match: games won by each player in games 1-2 (ties count for neither). */
+export function seriesScore(m: Match): { a: number; b: number } {
+  const games = [m.g1, m.g2];
+  return {
+    a: games.filter((g) => g === "A").length,
+    b: games.filter((g) => g === "B").length,
+  };
+}
+
+/** Series cut match: games 1 and 2 are in and the players are level, so game 3 decides. */
+export function needsDecider(m: Match): boolean {
+  if (m.b === null || m.g1 === null || m.g2 === null) return false;
+  const s = seriesScore(m);
+  return s.a === s.b;
+}
+
+function higherSeed(m: Match, seeds: Map<string, number>): string {
+  const sa = seeds.get(m.a) ?? Infinity;
+  const sb = seeds.get(m.b!) ?? Infinity;
+  return sa <= sb ? m.a : m.b!;
+}
+
+/** The higher seed of a cut match (the player who picks sides in a series match). */
+export function cutHigherSeed(m: Match, seeds: Map<string, number>): string {
+  return m.b === null ? m.a : higherSeed(m, seeds);
+}
+
+/**
+ * Winner of a cut match. A tied deciding game (single game, or series game 3) advances the higher
+ * seed (Rules page; NSG cut games cannot end tied in practice, the organizer records the higher
+ * seed if it happens). Series: more game wins after games 1-2, otherwise game 3.
+ */
+export function cutWinner(m: Match, seeds: Map<string, number>, format: CutFormat = "single"): string | null {
+  if (m.b === null) return m.a;
+  const decide = (g: Match["g1"] | undefined) =>
+    g === "A" ? m.a : g === "B" ? m.b : g === "D" ? higherSeed(m, seeds) : null;
+  if (format === "single") return decide(m.g1);
+  if (m.g1 === null || m.g2 === null) return null;
+  const s = seriesScore(m);
+  if (s.a !== s.b) return s.a > s.b ? m.a : m.b;
+  return decide(m.g3);
+}
+
+export function cutLoser(m: Match, seeds: Map<string, number>, format: CutFormat = "single"): string | null {
+  const w = cutWinner(m, seeds, format);
   if (w === null || m.b === null) return null;
   return w === m.a ? m.b : m.a;
 }
 
-/** Next cut round from the winners of `prev`, paired in bracket order, sides per cut rules. */
+/** Next cut round from the winners of `prev`, paired in bracket order, sides per cut format. */
 export function nextCutRound(
   prior: readonly Round[],
   prev: Round,
   seeds: Map<string, number>,
   rng: Rng,
+  format: CutFormat = "single",
 ): Round {
-  const winners = prev.matches.map((m) => cutWinner(m, seeds)!);
+  const winners = prev.matches.map((m) => cutWinner(m, seeds, format)!);
   const matches: Match[] = [];
   for (let i = 0; i < winners.length; i += 2) {
     const a = winners[i]!;
     const b = winners[i + 1]!;
-    matches.push({ a, b, corp: cutSide(prior, a, b, rng), g1: null, g2: null });
+    if (format === "series") matches.push(seriesMatch(a, b));
+    else matches.push({ a, b, corp: cutSide(prior, a, b, rng), g1: null, g2: null });
   }
   return { matches };
 }

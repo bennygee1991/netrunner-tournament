@@ -1,12 +1,20 @@
 import { z } from "zod";
-import { CUT_SIZES, FINALE, SWISS_ROUNDS_MAX, SWISS_ROUNDS_MIN, planSeason } from "@/engine";
+import {
+  CUT_SIZES,
+  FINALE,
+  LEAGUE_EVENT,
+  SEASON,
+  SWISS_ROUNDS_MAX,
+  SWISS_ROUNDS_MIN,
+  planSeason,
+} from "@/engine";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { type Actor, audit } from "../audit";
 import { fromIsoDate, isoDateSchema, toIsoDate } from "./dates";
 
 type Fail = { ok: false; error?: string; fieldErrors?: Partial<Record<string, string>> };
 
-function fieldErrors(err: z.ZodError) {
+export function fieldErrors(err: z.ZodError) {
   const out: Partial<Record<string, string>> = {};
   for (const i of err.issues) out[String(i.path[0] ?? "form")] ??= i.message;
   return out;
@@ -17,15 +25,54 @@ const seasonInput = z.object({
   firstDate: isoDateSchema,
 });
 
-/** Creates a season and its 4 events (2 weeks apart; events 1-2 Month 1, 3-4 Month 2). */
+/** League defaults for event `index` (1-based): events 1-3 Swiss only, the last the finale. */
+export function leagueFormat(finale: boolean) {
+  return finale
+    ? {
+        matchFormat: "SINGLE" as const,
+        swissRounds: FINALE.swissRounds,
+        cutSize: FINALE.cutSize,
+        cutFormat: "SERIES" as const,
+      }
+    : {
+        matchFormat: "SINGLE" as const,
+        swissRounds: LEAGUE_EVENT.swissRounds,
+        cutSize: LEAGUE_EVENT.cutSize,
+        cutFormat: "SINGLE" as const,
+      };
+}
+
+/** Per-event format choices when creating a season (the same toggles as event setup). */
+const eventFormatInput = () =>
+  eventSetupInput
+    .pick({ matchFormat: true, swissRounds: true, cutSize: true })
+    .extend({ cutFormat: z.enum(["SINGLE", "SERIES"]) });
+
+/**
+ * Creates a season and its 4 events (2 weeks apart; events 1-2 Month 1, 3-4 Month 2). `events`
+ * optionally sets each event's format; otherwise the league format is used.
+ */
 export async function createSeason(
   db: PrismaClient,
   actor: Actor,
   raw: unknown,
 ): Promise<{ ok: true; seasonId: string } | Fail> {
-  const parsed = seasonInput.safeParse(raw);
-  if (!parsed.success) return { ok: false, fieldErrors: fieldErrors(parsed.error) };
-  const { name, firstDate } = parsed.data;
+  const parsed = seasonInput
+    .extend({ events: z.array(eventFormatInput()).length(SEASON.events).optional() })
+    .safeParse(raw);
+  if (!parsed.success) {
+    // Errors inside an event are keyed "e<n>.<field>", matching the form's field names.
+    const out: Partial<Record<string, string>> = {};
+    for (const i of parsed.error.issues) {
+      const key =
+        i.path[0] === "events" && typeof i.path[1] === "number"
+          ? `e${i.path[1] + 1}.${String(i.path[2])}`
+          : String(i.path[0] ?? "form");
+      out[key] ??= i.message;
+    }
+    return { ok: false, fieldErrors: out };
+  }
+  const { name, firstDate, events: formats } = parsed.data;
   if (await db.season.findFirst({ where: { status: "ACTIVE" }, select: { id: true } })) {
     return { ok: false, error: "A season is already running. Archive it before creating a new one." };
   }
@@ -41,18 +88,26 @@ export async function createSeason(
             name: e.finale ? "Season finale" : e.name,
             date: fromIsoDate(e.date),
             month: e.month,
-            ...(e.finale ? { finale: true, swissRounds: FINALE.swissRounds, cutSize: FINALE.cutSize } : {}),
+            finale: e.finale,
+            // Chosen format, else the league format (events 1-3 Swiss only, finale top 4 series cut).
+            ...(formats?.[e.index - 1] ?? leagueFormat(e.finale)),
           })),
         },
       },
     });
-    await audit(tx, actor, "season.create", { seasonId: s.id, name, firstDate, events: plan.length });
+    await audit(tx, actor, "season.create", {
+      seasonId: s.id,
+      name,
+      firstDate,
+      events: plan.length,
+      formats: plan.map((e) => formats?.[e.index - 1] ?? leagueFormat(e.finale)),
+    });
     return s;
   });
   return { ok: true, seasonId: season.id };
 }
 
-const eventSetupInput = z.object({
+export const eventSetupInput = z.object({
   name: z.string().trim().min(1, "Give the event a name.").max(60),
   date: isoDateSchema,
   month: z.coerce.number().pipe(z.union([z.literal(1), z.literal(2)])),
@@ -86,8 +141,10 @@ const eventSetupInput = z.object({
     .optional(),
   venue: z.string().trim().max(120, "Venue must be at most 120 characters.").optional(),
   notes: z.string().trim().max(1000, "Notes must be at most 1000 characters.").optional(),
-  /** Season finale (double points, season-seeded cut); locked once the event starts. */
+  /** Season finale (double league points); locked once the event starts. */
   finale: z.boolean().optional(),
+  /** How cut matches are played; locked once the event starts. Omitted = unchanged. */
+  cutFormat: z.enum(["SINGLE", "SERIES"]).optional(),
 });
 
 const orNull = (v: string | undefined) => (v === undefined ? undefined : v === "" ? null : v);
@@ -112,7 +169,8 @@ export async function updateEventSetup(
     v.matchFormat !== event.matchFormat ||
     v.swissRounds !== event.swissRounds ||
     v.cutSize !== event.cutSize ||
-    (v.finale !== undefined && v.finale !== event.finale);
+    (v.finale !== undefined && v.finale !== event.finale) ||
+    (v.cutFormat !== undefined && v.cutFormat !== event.cutFormat);
   if (formatChanged && event.status !== "SIGNUP") {
     return { ok: false, error: "Format, Swiss rounds and cut size can only change before the event starts." };
   }
@@ -127,6 +185,7 @@ export async function updateEventSetup(
     venue: event.venue,
     notes: event.notes,
     finale: event.finale,
+    cutFormat: event.cutFormat,
   };
   const after = { ...v };
   await db.$transaction(async (tx) => {
@@ -143,6 +202,7 @@ export async function updateEventSetup(
         venue: orNull(v.venue),
         notes: orNull(v.notes),
         ...(v.finale !== undefined ? { finale: v.finale } : {}),
+        ...(v.cutFormat !== undefined ? { cutFormat: v.cutFormat } : {}),
         version: { increment: 1 },
       },
     });

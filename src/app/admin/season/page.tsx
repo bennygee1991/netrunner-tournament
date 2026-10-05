@@ -6,6 +6,7 @@ import { EventStatusBadge, formatLine } from "@/components/tournament/status-bad
 import { db } from "@/lib/db";
 import { formatDay, todayIso } from "@/lib/tournament/dates";
 import { getActiveSeason } from "@/lib/tournament/queries";
+import { leagueFormat } from "@/lib/tournament/season";
 import { ArchiveSeasonCard, ResetAllCard } from "./danger-zone";
 import { CreateSeasonForm, PrizesForm } from "./season-forms";
 
@@ -22,7 +23,11 @@ export default async function AdminSeasonPage({ searchParams }: PageProps<"/admi
         <Notice code={notice} />
         <Card tone="magenta">
           <CardTitle>Start a season</CardTitle>
-          <CreateSeasonForm defaultName={`Season ${past + 1}`} defaultDate={todayIso()} />
+          <CreateSeasonForm
+            defaultName={`Season ${past + 1}`}
+            defaultDate={todayIso()}
+            formats={[false, false, false, true].map((finale) => leagueFormat(finale))}
+          />
         </Card>
         <ResetAllCard />
       </>
@@ -41,7 +46,8 @@ export default async function AdminSeasonPage({ searchParams }: PageProps<"/admi
                 <div className="min-w-0 flex-1">
                   <p className="text-lg font-semibold">{e.name}</p>
                   <p className="font-mono text-xs text-muted">
-                    {formatDay(e.date)} · Month {e.month} · {formatLine(e.matchFormat, e.cutSize, e.finale)}
+                    {formatDay(e.date)} · Month {e.month} ·{" "}
+                    {formatLine(e.matchFormat, e.cutSize, e.finale, e.cutFormat)}
                   </p>
                   <p className="font-mono text-xs text-muted">
                     {e._count.entrants} entrants · {e._count.signups} sign-ups

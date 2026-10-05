@@ -15,6 +15,7 @@ const rec = (over: Partial<BadgeRecord> & { eventKey: string }): BadgeRecord => 
   cutSeed: null,
   cutSize: null,
   cutDraws: 0,
+  cutLosses: 0,
   lostFirstRound: false,
   corpWins: 0,
   runnerWins: 0,
@@ -89,6 +90,34 @@ describe("playerEventFacts", () => {
     expect(f.get("c")!.lostFirstRound).toBe(true);
     expect(f.get("b")).toMatchObject({ cutDraws: 1, runnerWins: 1 });
     expect([...f.values()].every((x) => x.cutSeed !== null)).toBe(true);
+  });
+});
+
+describe("playerEventFacts in a series cut", () => {
+  it("counts games 2 and 3 with their sides, and cut losses", () => {
+    const ev = newEvent({
+      id: "e",
+      status: "done",
+      cutSize: 4,
+      cutFormat: "series",
+      entrants: ["a", "b", "c", "d"],
+      rounds: [round(match("a", "d", "A"), match("b", "c", "A"))],
+      cut: [
+        round(
+          // a Corp in game 1 (lost), Runner in game 2 (won), decider: corp3 = b side (d), a won as Runner.
+          { a: "a", b: "d", corp: "a", g1: "B", g2: "A", g3: "A", corp3: "b" },
+          { a: "b", b: "c", corp: "b", g1: "A", g2: "A", g3: null, corp3: null },
+        ),
+        round({ a: "a", b: "c", corp: "a", g1: "A", g2: "A", g3: null, corp3: null }),
+      ],
+    });
+    const f = playerEventFacts(ev, byId);
+    // Swiss: a won as Corp. Cut: R2 game 2 Runner, game 3 Runner; final game 1 Corp, game 2 Runner.
+    expect(f.get("a")).toMatchObject({ corpWins: 2, runnerWins: 3, cutLosses: 1 });
+    // d won semifinal game 1 as Runner.
+    expect(f.get("d")).toMatchObject({ runnerWins: 1, cutLosses: 2 });
+    // c was the Corp in semifinal game 1 and lost everything in the cut.
+    expect(f.get("c")).toMatchObject({ cutLosses: 4, corpWins: 0 });
   });
 });
 
@@ -174,6 +203,8 @@ describe("computeBadges", () => {
     });
     expect(keys([perfect]).map((b) => b.key)).toContain("perfect-event");
     expect(keys([{ ...perfect, cutDraws: 1 }]).map((b) => b.key)).not.toContain("perfect-event");
+    // Won the series cut but dropped a game on the way.
+    expect(keys([{ ...perfect, cutLosses: 1 }]).map((b) => b.key)).not.toContain("perfect-event");
     // A Swiss-only win is not perfect (there was no cut to win).
     expect(keys([{ ...perfect, madeCut: false }]).map((b) => b.key)).not.toContain("perfect-event");
     const under = rec({ eventKey: "u", champion: true, rank: 1, madeCut: true, cutSeed: 8, cutSize: 8 });
@@ -206,6 +237,44 @@ describe("computeBadges", () => {
       rec({ eventKey: "b", opponentIds: ids(10, 10) }),
     ]);
     expect(more.find((b) => b.key === "mentor")?.eventKey).toBe("b"); // 20 distinct
+  });
+
+  it("one-off events have their own ladder and never count as league events", () => {
+    const one = (k: string, over: Partial<BadgeRecord> = {}) =>
+      rec({ eventKey: k, seasonKey: "One-off", oneOff: true, ...over });
+    const records = [
+      one("o1", { madeCut: true }),
+      ...["o2", "o3", "o4"].map((k) => one(k, { champion: true, rank: 1 })),
+      one("o5"),
+    ];
+    const got = Object.fromEntries(
+      computeBadges(
+        { records, seasonTitles: 0, reportsApproved: 0 },
+        { eventOrder: [], seasonOrder: [] },
+      ).map((b) => [b.key, b.eventKey]),
+    );
+    expect(got).toMatchObject({ wildcard: "o1", "special-guest": "o1", headliner: "o4", globetrotter: "o5" });
+    // Playing badges still count one-offs; league attendance does not.
+    expect(got["made-cut"]).toBe("o1");
+    expect(got["first-event"]).toBeUndefined();
+    expect(got["early-adopter"]).toBeUndefined();
+    expect(got["crossover"]).toBeUndefined();
+    expect(got["back-to-back"]).toBeUndefined();
+  });
+
+  it("awards Crossover for playing both kinds of event, in either order", () => {
+    const league = rec({ eventKey: "l1" });
+    const oneOff = rec({ eventKey: "o1", seasonKey: "One-off", oneOff: true });
+    for (const records of [
+      [league, oneOff],
+      [oneOff, league],
+    ]) {
+      const got = computeBadges(
+        { records, seasonTitles: 0, reportsApproved: 0 },
+        { eventOrder: ["l1"], seasonOrder: ["S1"] },
+      );
+      expect(got.find((b) => b.key === "crossover")?.eventKey).toBe(records[1]!.eventKey);
+    }
   });
 
   it("awards Dynasty and Reporter without an event", () => {

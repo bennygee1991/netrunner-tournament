@@ -22,11 +22,17 @@ export interface LoadedEvent {
     name: string;
     date: Date;
     index: number;
-    seasonId: string;
+    /** Null for a one-off event. */
+    seasonId: string | null;
+    /** The season's name, or "One-off" for a one-off event. */
     seasonName: string;
+    oneOff: boolean;
     finale: boolean;
   };
 }
+
+/** Stands in for the season name on one-off events (records, trophies, pages). */
+export const ONE_OFF_LABEL = "One-off";
 
 const STATUS_TO_ENGINE = { SIGNUP: "signup", SWISS: "swiss", CUT: "cut", DONE: "done" } as const;
 const STATUS_TO_DB = { signup: "SIGNUP", swiss: "SWISS", cut: "CUT", done: "DONE" } as const;
@@ -63,6 +69,17 @@ export function toLoaded(row: EventRow): LoadedEvent {
       corp: m.corpEntrantId === null ? null : m.corpEntrantId === m.aEntrantId ? "a" : "b",
       g1: m.result1 as GameResult | null,
       g2: m.result2 as GameResult | null,
+      ...(r.phase === "CUT" && row.cutFormat === "SERIES"
+        ? {
+            g3: m.result3 as GameResult | null,
+            corp3:
+              m.corp3EntrantId === null
+                ? null
+                : m.corp3EntrantId === m.aEntrantId
+                  ? ("a" as const)
+                  : ("b" as const),
+          }
+        : {}),
     })),
   });
   const state: EventState = {
@@ -78,8 +95,7 @@ export function toLoaded(row: EventRow): LoadedEvent {
     cut: row.rounds.filter((r) => r.phase === "CUT").map(toRound),
   };
   if (row.finale) state.pointsMultiplier = FINALE.pointsMultiplier;
-  if (Array.isArray(row.cutSeedOrder))
-    state.cutSeedOrder = row.cutSeedOrder.filter((x): x is string => typeof x === "string");
+  if (row.cutFormat === "SERIES") state.cutFormat = "series";
   return {
     state,
     version: row.version,
@@ -91,7 +107,8 @@ export function toLoaded(row: EventRow): LoadedEvent {
       date: row.date,
       index: row.index,
       seasonId: row.seasonId,
-      seasonName: row.season.name,
+      seasonName: row.season?.name ?? ONE_OFF_LABEL,
+      oneOff: row.seasonId === null,
       finale: row.finale,
     },
   };
@@ -119,7 +136,6 @@ export async function saveEvent(
       status: STATUS_TO_DB[state.status],
       swissRounds: state.swissRounds,
       cutSize: state.cutSize,
-      cutSeedOrder: state.cutSeedOrder ?? Prisma.DbNull,
       version: { increment: 1 },
     },
   });
@@ -145,6 +161,8 @@ export async function saveEvent(
               corpEntrantId: m.corp === null || m.b === null ? null : m.corp === "a" ? m.a : m.b,
               result1: m.g1,
               result2: m.g2,
+              result3: m.g3 ?? null,
+              corp3EntrantId: m.corp3 == null || m.b === null ? null : m.corp3 === "a" ? m.a : m.b,
             })),
           },
         },

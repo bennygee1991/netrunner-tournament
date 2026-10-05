@@ -9,6 +9,7 @@ import {
   opDrop,
   opFinish,
   opPairNext,
+  opPickSides,
   opReopen,
   opResetEvent,
   opRestartRound,
@@ -26,6 +27,8 @@ import {
   removeEntrant,
 } from "@/lib/tournament/registration";
 import { opApproveAgreedReports } from "@/lib/tournament/reports";
+import { opClock } from "@/lib/tournament/clock-ops";
+import { deleteOneOffEvent } from "@/lib/tournament/one-off";
 import { cryptoRng } from "@/lib/tournament/rng";
 import { updateEventSetup } from "@/lib/tournament/season";
 
@@ -60,6 +63,7 @@ export async function setupAction(_p: FormState, form: FormData): Promise<FormSt
     venue: str(form, "venue"),
     notes: str(form, "notes"),
     finale: form.get("finale") === "on",
+    cutFormat: str(form, "cutFormat") || undefined,
   };
   const res = await updateEventSetup(db, actor, eventId, input);
   return finish(eventId, res, "Event saved.");
@@ -186,4 +190,39 @@ export async function approveReportsAction(_p: FormState, form: FormData): Promi
     await opApproveAgreedReports(db, actor, eventId, cryptoRng, str(form, "version")),
     "Reported results approved.",
   );
+}
+
+export async function pickSidesAction(_p: FormState, form: FormData): Promise<FormState> {
+  const actor = await adminActor();
+  const eventId = str(form, "eventId");
+  const res = await opPickSides(db, actor, eventId, {
+    round: str(form, "round"),
+    match: str(form, "match"),
+    corpId: str(form, "corpId"),
+  });
+  return finish(eventId, res, "Sides set.");
+}
+
+export async function deleteOneOffAction(_p: FormState, form: FormData): Promise<FormState> {
+  const actor = await adminActor();
+  const eventId = str(form, "eventId");
+  const res = await deleteOneOffEvent(db, actor, eventId, str(form, "confirm"));
+  if (!res.ok) return { error: res.error };
+  revalidatePath("/events");
+  revalidatePath("/admin/events");
+  revalidatePath("/");
+  redirect("/admin/events?notice=event-deleted");
+}
+
+export async function clockAction(_p: FormState, form: FormData): Promise<FormState> {
+  const actor = await adminActor();
+  const eventId = str(form, "eventId");
+  const res = await opClock(db, actor, eventId, {
+    target: str(form, "target"),
+    match: str(form, "match") || undefined,
+    op: str(form, "op"),
+  });
+  if (!res.ok) return { error: res.error };
+  refresh(eventId);
+  return {};
 }

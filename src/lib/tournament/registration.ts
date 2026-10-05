@@ -18,7 +18,9 @@ async function findEvent(db: PrismaClient, eventId: unknown) {
 /** A player signs up for an open event (idempotent). */
 export async function playerSignUp(db: PrismaClient, userId: string, eventId: unknown): Promise<Result> {
   const event = await findEvent(db, eventId);
-  if (!event || event.season.status !== "ACTIVE") return { ok: false, error: "Event not found." };
+  // One-off events have no season; season events need the season to be running.
+  if (!event || (event.season && event.season.status !== "ACTIVE"))
+    return { ok: false, error: "Event not found." };
   if (event.status !== "SIGNUP") return { ok: false, error: "Sign-ups for this event are closed." };
   await db.signup.upsert({
     where: { eventId_userId: { eventId: event.id, userId } },

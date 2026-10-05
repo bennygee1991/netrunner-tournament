@@ -6,9 +6,10 @@ import { LiveRefresh } from "@/components/live-refresh";
 import { MatchCard } from "@/components/tournament/match-card";
 import { MyMatch } from "@/components/tournament/my-match";
 import { myOpenMatch } from "@/lib/tournament/my-match";
-import { FinaleBanner, SeasonSeeding } from "@/components/tournament/season-seeding";
+import { FinaleBanner } from "@/components/tournament/finale-banner";
 import { ResultsTable } from "@/components/tournament/results-table";
 import { SignupButton } from "@/components/tournament/signup-button";
+import { RoundClock } from "@/components/tournament/round-clock";
 import { TournamentChart } from "@/components/tournament/tournament-chart";
 import { StandingsTable } from "@/components/tournament/standings-table";
 import { EventStatusBadge, formatLine } from "@/components/tournament/status-badge";
@@ -45,11 +46,11 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
   return (
     <>
       {live && <LiveRefresh />}
-      <PageTitle kicker={meta.seasonName}>{meta.name}</PageTitle>
+      <PageTitle kicker={meta.oneOff ? "One-off event" : meta.seasonName}>{meta.name}</PageTitle>
       <div className="mb-4 flex flex-wrap items-center gap-3 font-mono text-sm text-muted">
         <EventStatusBadge status={meta.status} round={view.swiss.length} />
         <span>{eventWhen(meta)}</span>
-        <span>Month {meta.month}</span>
+        <span>{meta.oneOff ? "One-off · no league points" : `Month ${meta.month}`}</span>
         {user?.role === "ADMIN" && (
           <Link href={`/admin/events/${meta.id}`} className={buttonStyles.link}>
             Run this event
@@ -57,8 +58,9 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
         )}
       </div>
       <p className="mb-4 font-mono text-xs text-muted">
-        {formatLine(meta.matchFormat, meta.cutSize, meta.finale)}
+        {formatLine(meta.matchFormat, meta.cutSize, meta.finale, meta.cutFormat)}
         {meta.cutSize === 8 &&
+          meta.cutFormat === "SINGLE" &&
           " · single elimination (house rule; official top 8 cuts are double elimination)"}
       </p>
 
@@ -109,7 +111,12 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
       {view.results && (
         <Card tone="warn">
           <CardTitle>Final results</CardTitle>
-          <ResultsTable results={view.results} nameOf={view.loaded.nameOf} profileOf={profileOf} />
+          <ResultsTable
+            results={view.results}
+            nameOf={view.loaded.nameOf}
+            profileOf={profileOf}
+            noPoints={meta.oneOff}
+          />
         </Card>
       )}
 
@@ -181,15 +188,18 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
                 name: dropped.has(s.id) ? `${view.loaded.nameOf(s.id)} (dropped)` : view.loaded.nameOf(s.id),
                 rank: s.rank,
                 points: s.points,
-                inCut: !meta.finale && standingsCut > 0 && s.rank <= standingsCut,
+                inCut: standingsCut > 0 && s.rank <= standingsCut,
               }))}
-              cutSize={meta.finale ? 0 : standingsCut}
+              cutSize={standingsCut}
+              clock={view.clock}
             />
           </Card>
-          {view.seasonSeeding && <SeasonSeeding rows={view.seasonSeeding} fixed={view.cut.length > 0} />}
         </>
       ) : (
         <>
+          {view.clock && (
+            <RoundClock label={view.clock.label} clock={view.clock.main} limitMin={view.clock.limitMin} />
+          )}
           {view.cut.length > 0 && (
             <Card tone="warn">
               <CardTitle>Top cut</CardTitle>
@@ -245,7 +255,6 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
               />
             </Card>
           )}
-          {view.seasonSeeding && <SeasonSeeding rows={view.seasonSeeding} fixed={view.cut.length > 0} />}
         </>
       )}
     </>

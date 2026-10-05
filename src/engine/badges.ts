@@ -9,7 +9,7 @@ import type { EventState, GameResult, Match, NameOf } from "./types";
  * survive season resets. None of this changes pairings, standings or league points.
  */
 
-export type BadgeGroup = "trophy" | "attendance" | "results" | "sides" | "community";
+export type BadgeGroup = "trophy" | "attendance" | "results" | "sides" | "community" | "oneoff";
 
 export interface BadgeDef {
   key: string;
@@ -37,6 +37,8 @@ export const BADGE_THRESHOLDS = {
   balancedWins: 10,
   dynastyTitles: 2,
   ironmanSeasons: 2,
+  oneOffs: [1, 5, 10],
+  headlinerWins: 3,
 } as const;
 
 export const BADGES: readonly BadgeDef[] = [
@@ -51,8 +53,9 @@ export const BADGES: readonly BadgeDef[] = [
   ),
   def("trophy", "dynasty", "🏛️", "Dynasty", "Won the season twice."),
   def("trophy", "underdog", "🧗", "Underdog", "Won an event from the lowest seed in the cut."),
+  def("trophy", "headliner", "🎤", "Headliner", "Won 3 one-off events."),
   // Turning up.
-  def("attendance", "first-event", "🔌", "Jacked in", "Played a first league event."),
+  def("attendance", "first-event", "🔌", "Jacked in", "Played a first league (season) event."),
   def("attendance", "five-events", "🔋", "Regular", "Played 5 league events."),
   def("attendance", "ten-events", "🎖️", "Veteran", "Played 10 league events."),
   def("attendance", "twentyfive-events", "🛰️", "Old guard", "Played 25 league events."),
@@ -91,8 +94,15 @@ export const BADGES: readonly BadgeDef[] = [
     "Reporter",
     "Reported 10 of your own results that the organizer approved.",
   ),
+  // One-off events (no league points).
+  def("oneoff", "wildcard", "🃏", "Wildcard", "Played a first one-off event."),
+  def("oneoff", "globetrotter", "🧳", "Globetrotter", "Played 5 one-off events."),
+  def("oneoff", "world-tour", "🌍", "World tour", "Played 10 one-off events."),
+  def("oneoff", "special-guest", "🎟️", "Special guest", "Made the cut at a one-off event."),
+  def("oneoff", "crossover", "🔀", "Crossover", "Played both a league event and a one-off event."),
 ];
 
+const ONE_OFF_LADDER = ["wildcard", "globetrotter", "world-tour"] as const;
 const EVENT_LADDER = [
   "first-event",
   "five-events",
@@ -112,6 +122,8 @@ export interface PlayerEventFacts {
   cutSize: number | null;
   /** Tied cut games (a tied cut game advances the higher seed). */
   cutDraws: number;
+  /** Cut games lost (series cut matches can be won after losing a game). */
+  cutLosses: number;
   /** Lost their round 1 match (byes never count as a loss). */
   lostFirstRound: boolean;
   /** Games won as Corp / as Runner, Swiss and cut, byes excluded. */
@@ -121,14 +133,18 @@ export interface PlayerEventFacts {
   opponents: string[];
 }
 
-/** Corp side of each game of a match: game 1 uses `corp`, double-sided game 2 swaps. */
+/**
+ * Corp side of each game of a match: game 1 uses `corp`, game 2 swaps (double-sided Swiss and
+ * series cut), a series decider uses `corp3`.
+ */
 function gamesWithCorp(
   games: (GameResult | null)[],
   m: Match,
 ): { g: GameResult | null; corp: string | null }[] {
-  const first = m.corp === null ? null : m.corp === "a" ? m.a : m.b;
+  const id = (side: "a" | "b" | null | undefined) => (side == null ? null : side === "a" ? m.a : m.b);
+  const first = id(m.corp);
   const other = first === null ? null : first === m.a ? m.b : m.a;
-  return games.map((g, i) => ({ g, corp: i === 0 ? first : other }));
+  return games.map((g, i) => ({ g, corp: i === 0 ? first : i === 1 ? other : id(m.corp3) }));
 }
 
 function winnerOf(g: GameResult | null, m: Match): string | null {
@@ -144,6 +160,7 @@ export function playerEventFacts(ev: EventState, nameOf: NameOf): Map<string, Pl
       cutSeed: null,
       cutSize: null,
       cutDraws: 0,
+      cutLosses: 0,
       lostFirstRound: false,
       corpWins: 0,
       runnerWins: 0,
@@ -163,6 +180,7 @@ export function playerEventFacts(ev: EventState, nameOf: NameOf): Map<string, Pl
         fa.cutDraws++;
         fb.cutDraws++;
       }
+      if (cut && w) out.get(w === m.a ? m.b! : m.a)!.cutLosses++;
       if (!w || corp === null) continue;
       const f = out.get(w)!;
       if (w === corp) f.corpWins++;
@@ -181,7 +199,10 @@ export function playerEventFacts(ev: EventState, nameOf: NameOf): Map<string, Pl
       }
     }
   });
-  for (const r of ev.cut) for (const m of r.matches) tally(m, [m.g1], true);
+  for (const r of ev.cut) {
+    for (const m of r.matches)
+      tally(m, ev.cutFormat === "series" ? [m.g1, m.g2, m.g3 ?? null] : [m.g1], true);
+  }
 
   if (ev.cut.length) {
     const seeds = cutSeeds(ev, nameOf);
@@ -202,6 +223,8 @@ export function playerEventFacts(ev: EventState, nameOf: NameOf): Map<string, Pl
 /** One permanent event record, as the badge rules need it. */
 export interface BadgeRecord {
   eventKey: string;
+  /** One-off event (not part of a season). */
+  oneOff?: boolean;
   seasonKey: string;
   rank: number;
   champion: boolean;
@@ -213,6 +236,7 @@ export interface BadgeRecord {
   cutSeed: number | null;
   cutSize: number | null;
   cutDraws: number;
+  cutLosses: number;
   lostFirstRound: boolean;
   corpWins: number;
   runnerWins: number;
@@ -221,7 +245,7 @@ export interface BadgeRecord {
 }
 
 export interface BadgeContext {
-  /** Every league event in play order (event keys). */
+  /** Every league (season) event in play order (event keys); one-offs are not included. */
   eventOrder: readonly string[];
   /** Every season in play order (season keys); the first one is the league's first season. */
   seasonOrder: readonly string[];
@@ -260,8 +284,57 @@ export function computeBadges(input: PlayerBadgeInput, ctx: BadgeContext): Earne
   let runner = 0;
   let lastTitleIndex: number | null = null;
 
+  /** Badges for how you played, earned at league and one-off events alike. */
+  const playing = (r: BadgeRecord, at: string) => {
+    if (r.madeCut) {
+      cuts++;
+      T.cuts.forEach((n, i) => {
+        if (cuts >= n) earn(CUT_LADDER[i]!, at);
+      });
+      if (r.rank <= 2) earn("finalist", at);
+      if (r.lostFirstRound) earn("comeback", at);
+    }
+    if (r.undefeated) earn("undefeated-swiss", at);
+    if (r.draws + r.cutDraws >= T.ties) earn("diplomat", at);
+
+    if (r.champion) {
+      if (r.madeCut && r.losses === 0 && r.draws === 0 && r.cutDraws === 0 && r.cutLosses === 0)
+        earn("perfect-event", at);
+      if (r.madeCut && r.cutSeed !== null && r.cutSize !== null && r.cutSeed === r.cutSize)
+        earn("underdog", at);
+    }
+
+    corp += r.corpWins;
+    runner += r.runnerWins;
+    for (const n of T.sideWins) {
+      if (corp >= n) earn(`corp-${n}`, at);
+      if (runner >= n) earn(`runner-${n}`, at);
+    }
+    if (corp >= T.balancedWins && runner >= T.balancedWins) earn("balanced", at);
+
+    for (const o of r.opponentIds) opponents.add(o);
+    if (opponents.size >= T.opponents) earn("mentor", at);
+  };
+
+  let oneOffs = 0;
+  let oneOffTitles = 0;
+  let leagueEvents = 0;
   for (const r of input.records) {
     const at = r.eventKey;
+    if (r.oneOff) {
+      // One-off events: their own ladder; playing badges below still count them.
+      oneOffs++;
+      T.oneOffs.forEach((n, i) => {
+        if (oneOffs >= n) earn(ONE_OFF_LADDER[i]!, at);
+      });
+      if (r.madeCut) earn("special-guest", at);
+      if (r.champion && ++oneOffTitles >= T.headlinerWins) earn("headliner", at);
+      if (leagueEvents > 0) earn("crossover", at);
+      playing(r, at);
+      continue;
+    }
+    leagueEvents++;
+    if (oneOffs > 0) earn("crossover", at);
     events++;
     T.events.forEach((n, i) => {
       if (events >= n) earn(EVENT_LADDER[i]!, at);
@@ -278,37 +351,13 @@ export function computeBadges(input: PlayerBadgeInput, ctx: BadgeContext): Earne
     }
     if (ctx.seasonOrder.length && r.seasonKey === ctx.seasonOrder[0]) earn("early-adopter", at);
 
-    if (r.madeCut) {
-      cuts++;
-      T.cuts.forEach((n, i) => {
-        if (cuts >= n) earn(CUT_LADDER[i]!, at);
-      });
-      if (r.rank <= 2) earn("finalist", at);
-      if (r.lostFirstRound) earn("comeback", at);
-    }
-    if (r.undefeated) earn("undefeated-swiss", at);
-    if (r.draws + r.cutDraws >= T.ties) earn("diplomat", at);
-
     if (r.champion) {
       const idx = eventIndex.get(r.eventKey);
       if (idx !== undefined && lastTitleIndex !== null && idx === lastTitleIndex + 1)
         earn("back-to-back", at);
       if (idx !== undefined) lastTitleIndex = idx;
-      if (r.madeCut && r.losses === 0 && r.draws === 0 && r.cutDraws === 0) earn("perfect-event", at);
-      if (r.madeCut && r.cutSeed !== null && r.cutSize !== null && r.cutSeed === r.cutSize)
-        earn("underdog", at);
     }
-
-    corp += r.corpWins;
-    runner += r.runnerWins;
-    for (const n of T.sideWins) {
-      if (corp >= n) earn(`corp-${n}`, at);
-      if (runner >= n) earn(`runner-${n}`, at);
-    }
-    if (corp >= T.balancedWins && runner >= T.balancedWins) earn("balanced", at);
-
-    for (const o of r.opponentIds) opponents.add(o);
-    if (opponents.size >= T.opponents) earn("mentor", at);
+    playing(r, at);
   }
 
   if (input.seasonTitles >= T.dynastyTitles) earn("dynasty", null);

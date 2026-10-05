@@ -5,10 +5,11 @@ import { notFound } from "next/navigation";
 import { ActionForm } from "@/components/action-form";
 import { ConfirmSubmit } from "@/components/confirm-submit";
 import { Notice } from "@/components/notice";
-import { FinaleBanner, SeasonSeeding } from "@/components/tournament/season-seeding";
+import { FinaleBanner } from "@/components/tournament/finale-banner";
 import { SubmitButton } from "@/components/submit-button";
 import { MatchCard } from "@/components/tournament/match-card";
 import { ResultEntry } from "@/components/tournament/result-entry";
+import { ClockControls, RoundClock } from "@/components/tournament/round-clock";
 import { ResultsTable } from "@/components/tournament/results-table";
 import { StandingsTable } from "@/components/tournament/standings-table";
 import { EventStatusBadge, formatLine } from "@/components/tournament/status-badge";
@@ -19,6 +20,9 @@ import { toIsoDate } from "@/lib/tournament/dates";
 import { type EventView, getEventView } from "@/lib/tournament/queries";
 import {
   addPlayerAction,
+  clockAction,
+  deleteOneOffAction,
+  pickSidesAction,
   approveAction,
   approveReportsAction,
   approveAllAction,
@@ -93,11 +97,32 @@ function NextStepCard({ view }: { view: EventView }) {
       );
       break;
     case "done":
-      content = <p className="text-sm text-ok">Event finished. Points are on the leaderboards.</p>;
+      content = (
+        <p className="text-sm text-ok">
+          {meta.oneOff
+            ? "Event finished. Results and trophies are on the players' profiles."
+            : "Event finished. Points are on the leaderboards."}
+        </p>
+      );
   }
   return (
     <Card tone="magenta">
       <CardTitle>Next step</CardTitle>
+      {view.clock && (
+        <div className="mb-4">
+          <RoundClock label={view.clock.label} clock={view.clock.main} limitMin={view.clock.limitMin} />
+          <ClockControls
+            action={clockAction}
+            eventId={meta.id}
+            target="round"
+            clock={view.clock.main}
+            label={view.clock.label}
+          />
+          <p className="mt-1 text-xs text-muted">
+            Start the clock once everyone is seated. Players see it on the event page.
+          </p>
+        </div>
+      )}
       {view.agreedReports > 0 && (
         <ActionForm action={approveReportsAction} fields={fields} className="mb-4">
           <p className="mb-2 text-sm">
@@ -133,6 +158,8 @@ function Rounds({ view, repair }: { view: EventView; repair: boolean }) {
                   <ResultEntry
                     key={m.index}
                     action={resultAction}
+                    sidesAction={pickSidesAction}
+                    clockAction={clockAction}
                     eventId={view.meta.id}
                     phase="cut"
                     round={r.index}
@@ -386,6 +413,27 @@ function RepairCard({ view }: { view: EventView }) {
   );
 }
 
+function DeleteOneOffCard({ meta }: { meta: EventView["meta"] }) {
+  return (
+    <Card tone="danger">
+      <CardTitle>Delete this one-off event</CardTitle>
+      <TypedConfirmForm
+        id="delete-one-off"
+        action={deleteOneOffAction}
+        phrase={meta.name}
+        fields={{ eventId: meta.id }}
+        label={`Type "${meta.name}" to delete this event`}
+        buttonText="Delete event"
+      >
+        <p className="mb-2 text-sm text-muted">
+          Removes the event, its entrants, results, and the records and trophies it gave out. This cannot be
+          undone.
+        </p>
+      </TypedConfirmForm>
+    </Card>
+  );
+}
+
 export default async function AdminEventPage({ params, searchParams }: PageProps<"/admin/events/[id]">) {
   const { id } = await params;
   const sp = await searchParams;
@@ -397,19 +445,20 @@ export default async function AdminEventPage({ params, searchParams }: PageProps
 
   return (
     <>
-      <PageTitle kicker={`${meta.seasonName} · run event`}>{meta.name}</PageTitle>
+      <PageTitle kicker={`${meta.oneOff ? "One-off event" : meta.seasonName} · run event`}>
+        {meta.name}
+      </PageTitle>
       <div className="mb-4 flex flex-wrap items-center gap-3 font-mono text-sm text-muted">
         <EventStatusBadge status={meta.status} round={view.swiss.length} />
         <span>{eventWhen(meta)}</span>
-        <span>Month {meta.month}</span>
-        <span>{formatLine(meta.matchFormat, meta.cutSize, meta.finale)}</span>
+        <span>{meta.oneOff ? "One-off · no league points" : `Month ${meta.month}`}</span>
+        <span>{formatLine(meta.matchFormat, meta.cutSize, meta.finale, meta.cutFormat)}</span>
         <Link href={`/events/${meta.id}`} className={buttonStyles.link}>
           Public page &amp; flowchart
         </Link>
       </div>
 
       {meta.finale && <FinaleBanner />}
-      {view.seasonSeeding && <SeasonSeeding rows={view.seasonSeeding} fixed={view.cut.length > 0} />}
       <Notice code={sp.notice} />
       <NextStepCard view={view} />
       <Rounds view={view} repair={repair} />
@@ -417,7 +466,7 @@ export default async function AdminEventPage({ params, searchParams }: PageProps
       {view.results && (
         <Card tone="warn">
           <CardTitle>League points earned</CardTitle>
-          <ResultsTable results={view.results} nameOf={view.loaded.nameOf} />
+          <ResultsTable results={view.results} nameOf={view.loaded.nameOf} noPoints={meta.oneOff} />
         </Card>
       )}
 
@@ -427,7 +476,7 @@ export default async function AdminEventPage({ params, searchParams }: PageProps
           <StandingsTable
             standings={view.standings}
             nameOf={view.loaded.nameOf}
-            cutSize={meta.finale ? 0 : meta.cutSize}
+            cutSize={meta.cutSize}
             double={double}
             dropped={new Set(view.loaded.state.dropped)}
           />
@@ -452,11 +501,14 @@ export default async function AdminEventPage({ params, searchParams }: PageProps
             venue: meta.venue ?? "",
             notes: meta.notes ?? "",
             finale: meta.finale,
+            cutFormat: meta.cutFormat,
+            oneOff: meta.oneOff,
           }}
           locked={meta.status !== "SIGNUP"}
           autoRounds={meta.effectiveSwissRounds}
         />
       </Card>
+      {meta.oneOff && <DeleteOneOffCard meta={meta} />}
     </>
   );
 }

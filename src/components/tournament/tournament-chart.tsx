@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { cx } from "@/components/ui";
+import { ROUND_MINUTES } from "@/engine";
+import type { ClockView } from "@/lib/tournament/clock-ops";
 import type { MatchView, RoundView } from "@/lib/tournament/queries";
+import { RoundClock } from "./round-clock";
 
 type Game = "A" | "B" | "D" | null;
 
@@ -99,17 +102,37 @@ function MatchBox({
       </div>
     );
   }
-  const games = double ? [m.g1, m.g2] : [m.g1];
-  const [oa, ob] = outcomes(games);
+  const series = m.series;
+  const games = series ? [m.g1, m.g2, series.g3] : double ? [m.g1, m.g2] : [m.g1];
+  const [oa, ob] = series
+    ? series.winnerId === null
+      ? [null, null]
+      : series.winnerId === m.a.id
+        ? (["W", "L"] as const)
+        : (["L", "W"] as const)
+    : outcomes(games);
+  // Series: game wins each (shown next to the result), sides only for game 1 (they swap after).
+  const wins = (side: "A" | "B") => games.filter((g) => g === side).length;
   const corpA = m.corpId === null ? null : m.corpId === m.a.id;
-  const awaiting = !!m.reports?.reports.length && games.some((g) => g === null);
+  const awaiting = !!m.reports?.reports.length && !oa;
   return (
     <div
       className={cx("rounded border border-border bg-surface", involved && "border-cyan ring-2 ring-cyan")}
     >
       <p className="flex justify-between px-2 pt-1 font-mono text-[10px] text-muted uppercase">
         <span>{label}</span>
-        {awaiting ? <span className="text-warn">awaiting approval</span> : !oa ? <span>playing</span> : null}
+        {awaiting ? (
+          <span className="text-warn">awaiting approval</span>
+        ) : series && m.corpId === null ? (
+          <span>picking sides</span>
+        ) : !oa ? (
+          <span>playing</span>
+        ) : series ? (
+          <span>
+            {wins("A")}-{wins("B")}
+            {series.g3 ? " (g3)" : ""}
+          </span>
+        ) : null}
       </p>
       <Line
         id={m.a.id}
@@ -144,6 +167,7 @@ export function TournamentChart({
   pointsAfter,
   standings,
   cutSize,
+  clock = null,
 }: {
   swiss: RoundView[];
   cut: RoundView[];
@@ -152,6 +176,8 @@ export function TournamentChart({
   pointsAfter: Record<string, number>[];
   standings: ChartStanding[];
   cutSize: number;
+  /** The running round's clock, shown on top and in that round's column. */
+  clock?: ClockView | null;
 }) {
   const [focus, setFocus] = useState<string | null>(null);
   const toggle = (id: string) => setFocus((f) => (f === id ? null : id));
@@ -160,8 +186,11 @@ export function TournamentChart({
     (standings.find((s) => s.id === focus)?.name ??
       swiss.flatMap((r) => r.matches).find((m) => m.a.id === focus)?.a.name);
 
+  const liveSwiss = clock && cut.length === 0 ? swiss.length - 1 : -1;
+  const liveCut = clock && cut.length > 0 ? cut.length - 1 : -1;
   return (
     <div>
+      {clock && <RoundClock label={clock.label} clock={clock.main} limitMin={clock.limitMin} />}
       <p className="mb-2 text-xs text-muted" aria-live="polite">
         {focusName ? (
           <>
@@ -187,6 +216,11 @@ export function TournamentChart({
                 {r.label}
                 {!r.complete && <span className="text-muted"> · live</span>}
               </h3>
+              {ri === liveSwiss && clock && (
+                <div className="mb-2">
+                  <RoundClock label={clock.label} clock={clock.main} limitMin={clock.limitMin} compact />
+                </div>
+              )}
               <ol className="space-y-2">
                 {r.matches.map((m) => (
                   <li key={m.index}>
@@ -240,6 +274,11 @@ export function TournamentChart({
           {cut.map((r, ci) => (
             <section key={`c${r.index}`} className="flex w-52 shrink-0 flex-col" aria-label={r.label}>
               <h3 className="mb-2 font-mono text-xs tracking-widest text-warn uppercase">{r.label}</h3>
+              {ci === liveCut && clock && (
+                <div className="mb-2">
+                  <RoundClock label={clock.label} clock={clock.main} limitMin={clock.limitMin} compact />
+                </div>
+              )}
               <ol className="flex flex-1 flex-col justify-around gap-2">
                 {r.matches.map((m) => (
                   <li key={m.index} className="relative">
@@ -250,6 +289,16 @@ export function TournamentChart({
                       onFocus={toggle}
                       label={`Match ${m.index + 1}`}
                     />
+                    {m.series?.decider && m.series.g3 === null && m.series.deciderClock && (
+                      <div className="mt-1">
+                        <RoundClock
+                          label={`Match ${m.index + 1} game 3`}
+                          clock={m.series.deciderClock}
+                          limitMin={ROUND_MINUTES.cutDecider}
+                          compact
+                        />
+                      </div>
+                    )}
                     {ci < cut.length - 1 && (
                       // Connector towards the next cut round.
                       <span aria-hidden className="absolute top-1/2 -right-6 h-px w-6 bg-border" />

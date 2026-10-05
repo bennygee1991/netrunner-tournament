@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_ROUNDS, EVENT_POINTS, FINALE, GAME_POINTS, BADGES, byePoints } from "@/engine";
+import {
+  DEFAULT_ROUNDS,
+  EVENT_POINTS,
+  FINALE,
+  GAME_POINTS,
+  BADGES,
+  ROUND_MINUTES,
+  byePoints,
+} from "@/engine";
 import { rulesContent } from "./rules-content";
 
 const text = rulesContent()
@@ -26,12 +34,20 @@ describe("Rules page stays in sync with the engine", () => {
     );
   });
 
+  it("states the round clock limits from the engine", () => {
+    expect(text).toContain(`${ROUND_MINUTES.single} minutes for a single-sided Swiss round`);
+    expect(text).toContain(`${ROUND_MINUTES.double} minutes for a double-sided round`);
+    expect(text).toContain(`own ${ROUND_MINUTES.cutDecider} minutes`);
+  });
+
   it("states the season finale rules from the engine", () => {
     expect(text).toContain(
       `×${FINALE.pointsMultiplier} league points: champion ${EVENT_POINTS.champion * FINALE.pointsMultiplier}`,
     );
-    expect(text).toContain(`plays ${FINALE.swissRounds} Swiss round, then a top ${FINALE.cutSize} cut`);
-    expect(text).toContain("decided by the Season leaderboard");
+    expect(text).toContain(`plays ${FINALE.swissRounds} Swiss rounds, then a top ${FINALE.cutSize} cut`);
+    expect(text).toContain("seeded from its own Swiss standings");
+    expect(text).toContain("The higher seed picks Corp or Runner for game 1");
+    expect(text).toContain("game 3 decides it, with sides set by a coin flip");
   });
 
   it("covers every rule area the engine implements", () => {

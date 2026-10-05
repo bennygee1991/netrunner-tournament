@@ -4,6 +4,8 @@ import {
   DEFAULT_ROUNDS,
   EVENT_POINTS,
   FINALE,
+  LEAGUE_EVENT,
+  ROUND_MINUTES,
   GAME_POINTS,
   SEASON,
   SWISS_ROUNDS_MAX,
@@ -49,10 +51,18 @@ export function rulesContent(): RulesSection[] {
           ],
         },
         {
-          heading: "Top cut",
+          heading: "Top cut (league format)",
           items: [
-            "Cut games are always single games.",
-            "First cut round: sides are random.",
+            "Each cut match is up to three games. The higher seed picks Corp or Runner for game 1, and sides swap for game 2.",
+            "Win both games and you win the match. A tied game counts for neither player, so one win and one tie also wins.",
+            "If the match is level after two games, game 3 decides it, with sides set by a coin flip (done by the site).",
+            "If game 3 ends tied, the higher seed advances.",
+          ],
+        },
+        {
+          heading: "Top cut (single games, if the organizer chooses it)",
+          items: [
+            "Each cut match is one game. First cut round: sides are random.",
             "After that: if one player has played more Corp in the cut and the other has not (more Runner, or an even split), each takes the side they have played less. Otherwise it is random.",
             "If a cut game ends tied, the higher seed advances.",
           ],
@@ -98,7 +108,7 @@ export function rulesContent(): RulesSection[] {
           items: [
             `Events can end with a top ${cutSizes} cut, seeded from the final Swiss standings: 1 v 8, 4 v 5, 2 v 7, 3 v 6 (top 4: 1 v 4, 2 v 3).`,
             "If there are fewer players than the cut size, the cut halves until it fits; with fewer than 4 players there is no cut.",
-            "Our top 8 is single elimination, a house rule for casual events. Official NSG top 8 cuts are double elimination.",
+            "The cut is single elimination: lose a match and you are out. This is a house rule for our league; official NSG top 8 cuts are double elimination.",
           ],
         },
       ],
@@ -110,9 +120,8 @@ export function rulesContent(): RulesSection[] {
       blocks: [
         {
           items: [
-            `The last event of the season plays ${FINALE.swissRounds} Swiss round, then a top ${FINALE.cutSize} cut.`,
-            `The cut is decided by the Season leaderboard, not the Swiss round: the top ${FINALE.cutSize} entrants by season points (then event wins) qualify and are seeded in that order. Ties on both are broken by the finale's Swiss standings.`,
-            "Entrants with no season points can still qualify if there are free places, in Swiss order.",
+            `Events 1-3 of a season are Swiss only: ${LEAGUE_EVENT.swissRounds} rounds, points per win, no cut.`,
+            `The last event (the finale) plays ${FINALE.swissRounds} Swiss rounds, then a top ${FINALE.cutSize} cut seeded from its own Swiss standings (1 v 4, 2 v 3), in the league cut format above.`,
             `League points from the finale are doubled (×${FINALE.pointsMultiplier}).`,
           ],
         },
@@ -125,7 +134,9 @@ export function rulesContent(): RulesSection[] {
       blocks: [
         {
           items: [
-            "Single-sided rounds: about 40-45 minutes. Double-sided: 65-70.",
+            `Round clock: ${ROUND_MINUTES.single} minutes for a single-sided Swiss round, ${ROUND_MINUTES.double} minutes for a double-sided round.`,
+            `Top cut: each match gets ${ROUND_MINUTES.cutMatch} minutes for games 1 and 2, and a deciding game 3 gets its own ${ROUND_MINUTES.cutDecider} minutes. A single-game cut match gets ${ROUND_MINUTES.cutSingle} minutes.`,
+            "The organizer starts the clock once everyone is seated, and can pause it or add time. The countdown shows on the event page and in the flowchart.",
             "When time is called, the active player finishes their turn, then the other player takes a final turn. Most agenda points wins; equal means a tie.",
             "Intentional draws are allowed if both players tell the organizer within 5 minutes of the round starting. It scores as a tie.",
           ],

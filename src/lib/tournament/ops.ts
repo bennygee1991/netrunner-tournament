@@ -4,11 +4,13 @@ import {
   type EventState,
   dropEntrant,
   finishEvent,
+  pickCutSides,
   pairNextRound,
   reopenEvent,
   resetEvent,
   restartRound,
   setResult,
+  sidePicker,
   startCut,
   startSwiss,
   undoRound,
@@ -18,7 +20,6 @@ import {
 import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 import { type Actor, audit } from "../audit";
 import { ConflictError, ServiceError } from "./errors";
-import { finaleOrder, seasonStandingsByPlayer } from "./finale";
 import { clearOutcome, recordOutcome } from "./records";
 import { pruneReports } from "./reports";
 import { type LoadedEvent, loadEvent, saveEvent } from "./state";
@@ -94,34 +95,16 @@ export function opPairNext(db: PrismaClient, actor: Actor, eventId: unknown, rng
   );
 }
 
-export async function opStartCut(
-  db: PrismaClient,
-  actor: Actor,
-  eventId: unknown,
-  rng: Rng,
-  version?: unknown,
-) {
-  // Season finale: the cut is seeded from the Season board (finished events so far).
-  const id = typeof eventId === "string" && eventId.length <= 64 ? eventId : null;
-  const ev = id
-    ? await db.event.findUnique({ where: { id }, select: { finale: true, seasonId: true } })
-    : null;
-  const season = ev?.finale ? await seasonStandingsByPlayer(db, ev.seasonId) : null;
+export function opStartCut(db: PrismaClient, actor: Actor, eventId: unknown, rng: Rng, version?: unknown) {
   return runEventOp(
     db,
     actor,
     eventId,
     "event.start_cut",
-    (l) =>
-      startCut(
-        l.state,
-        l.nameOf,
-        rng,
-        season ? finaleOrder(l.state, l.nameOf, l.entrants, season) : undefined,
-      ),
+    (l) => startCut(l.state, l.nameOf, rng),
     (l, next) => ({
       cutSize: next.cutSize,
-      seeding: season ? "season standings (finale)" : "swiss standings",
+      cutFormat: next.cutFormat ?? "single",
       seeds: next.cut[0]?.matches.flatMap((m) => [l.nameOf(m.a), m.b ? l.nameOf(m.b) : "BYE"]) ?? [],
     }),
     version,
@@ -136,7 +119,7 @@ export const resultInput = z.object({
   phase: z.enum(["swiss", "cut"]),
   round: z.coerce.number().int().min(0).max(50),
   match: z.coerce.number().int().min(0).max(500),
-  game: z.coerce.number().pipe(z.union([z.literal(1), z.literal(2)])),
+  game: z.coerce.number().pipe(z.union([z.literal(1), z.literal(2), z.literal(3)])),
   result: z.enum(["A", "B", "D", ""]).transform((v) => (v === "" ? null : v)),
   /** Players the admin saw at this table; guards against entering a result on a re-paired round. */
   a: z.string().max(64).optional(),
@@ -163,7 +146,7 @@ export function opSetResult(db: PrismaClient, actor: Actor, eventId: unknown, ra
     (l) => {
       const rounds = input.phase === "swiss" ? l.state.rounds : l.state.cut;
       const m = rounds[input.round]?.matches[input.match];
-      const previous = m ? (input.game === 1 ? m.g1 : m.g2) : null;
+      const previous = m ? (input.game === 1 ? m.g1 : input.game === 2 ? m.g2 : (m.g3 ?? null)) : null;
       return {
         phase: input.phase,
         round: input.round + 1,
@@ -172,6 +155,53 @@ export function opSetResult(db: PrismaClient, actor: Actor, eventId: unknown, ra
         players: m ? [l.nameOf(m.a), m.b ? l.nameOf(m.b) : "BYE"] : [],
         resultBefore: previous,
         resultAfter: input.result,
+      };
+    },
+  );
+}
+
+const sidesInput = z.object({
+  round: z.coerce.number().int().min(0).max(50),
+  match: z.coerce.number().int().min(0).max(500),
+  /** Entrant who plays Corp in game 1. */
+  corpId: z.string().min(1).max(64),
+});
+
+/**
+ * Series cut: sets who is Corp in game 1. The organizer can pick for anyone; a player can pick only
+ * for a match where they are the higher seed (`asPlayer` = their user id).
+ */
+export function opPickSides(
+  db: PrismaClient,
+  actor: Actor,
+  eventId: unknown,
+  raw: unknown,
+  asPlayer?: string,
+) {
+  const parsed = sidesInput.safeParse(raw);
+  if (!parsed.success) return Promise.resolve({ ok: false as const, error: "Invalid choice." });
+  const input = parsed.data;
+  return runEventOp(
+    db,
+    actor,
+    eventId,
+    "event.pick_sides",
+    (l) => {
+      if (asPlayer !== undefined) {
+        const picker = sidePicker(l.state, input.round, input.match, l.nameOf);
+        const mine = l.entrants.find((e) => e.id === picker)?.userId === asPlayer;
+        if (!mine) throw new ServiceError("Only the higher seed picks sides for this match.");
+      }
+      return pickCutSides(l.state, input);
+    },
+    (l) => {
+      const m = l.state.cut[input.round]?.matches[input.match];
+      return {
+        round: input.round + 1,
+        match: input.match + 1,
+        players: m ? [l.nameOf(m.a), m.b ? l.nameOf(m.b) : "BYE"] : [],
+        corpGame1: l.nameOf(input.corpId),
+        by: asPlayer !== undefined ? "higher seed" : "organizer",
       };
     },
   );

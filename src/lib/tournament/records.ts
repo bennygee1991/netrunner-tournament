@@ -10,7 +10,8 @@ export async function clearOutcome(tx: Prisma.TransactionClient, eventId: string
 
 /**
  * Writes per-player event records (with the facts badges need) and the event champion trophy for
- * a finished event, plus the finale champion trophy for a season finale.
+ * a finished event, plus the finale champion trophy for a season finale. One-off events record no
+ * league points and award the one-off champion trophy instead.
  */
 export async function recordOutcome(tx: Prisma.TransactionClient, loaded: LoadedEvent, state = loaded.state) {
   const { event, nameOf } = loaded;
@@ -31,7 +32,8 @@ export async function recordOutcome(tx: Prisma.TransactionClient, loaded: Loaded
       playerName: entrant.name,
       placing: r.label,
       rank: r.rank,
-      points: r.points,
+      // One-off events give no league points.
+      points: event.oneOff ? 0 : r.points,
       wins: s.wins,
       draws: s.draws,
       losses: s.losses,
@@ -44,16 +46,23 @@ export async function recordOutcome(tx: Prisma.TransactionClient, loaded: Loaded
       cutSeed: f.cutSeed,
       cutSize: f.cutSize,
       cutDraws: f.cutDraws,
+      cutLosses: f.cutLosses,
       lostFirstRound: f.lostFirstRound,
       corpWins: f.corpWins,
       runnerWins: f.runnerWins,
       opponentIds: f.opponents.map((o) => byId.get(o)?.userId).filter((u): u is string => !!u),
+      oneOff: event.oneOff,
       statsVersion: 2,
     };
   });
   await tx.eventRecord.createMany({ data: rows });
   for (const r of rows.filter((x) => x.champion)) {
-    for (const kind of event.finale ? ["event-champion", "finale-champion"] : ["event-champion"])
+    const kinds = event.oneOff
+      ? ["oneoff-champion"]
+      : event.finale
+        ? ["event-champion", "finale-champion"]
+        : ["event-champion"];
+    for (const kind of kinds)
       await tx.trophy.create({
         data: {
           kind,

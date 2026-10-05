@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { type EventState, type GameResult, type Rng, setResult } from "@/engine";
+import { type EventState, type GameResult, type Rng, needsDecider, setResult } from "@/engine";
 import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 import type { Actor } from "../audit";
 import { runEventOp } from "./ops";
@@ -13,7 +13,7 @@ import { type LoadedEvent, loadEvent } from "./state";
 type Tx = PrismaClient | Prisma.TransactionClient;
 
 export interface ReportView {
-  game: 1 | 2;
+  game: 1 | 2 | 3;
   reporterId: string;
   reporterName: string;
   result: GameResult;
@@ -23,7 +23,7 @@ export interface MatchReports {
   /** Reports per game, keyed "phase:round:match". */
   reports: ReportView[];
   /** Per game: the agreed result if every report agrees, or "conflict". */
-  status: Partial<Record<1 | 2, GameResult | "conflict">>;
+  status: Partial<Record<1 | 2 | 3, GameResult | "conflict">>;
 }
 
 export const matchKey = (phase: "swiss" | "cut", round: number, match: number) =>
@@ -40,16 +40,24 @@ function openMatches(state: EventState) {
     match: number;
     a: string;
     b: string;
-    games: (1 | 2)[];
+    games: (1 | 2 | 3)[];
   }[] = [];
   const add = (phase: "swiss" | "cut") => {
     const rounds = phase === "swiss" ? state.rounds : state.cut;
     const ri = rounds.length - 1;
     rounds[ri]?.matches.forEach((m, mi) => {
       if (m.b === null) return;
-      const games: (1 | 2)[] = [];
-      if (m.g1 === null) games.push(1);
-      if (phase === "swiss" && state.format === "double" && m.g2 === null) games.push(2);
+      const games: (1 | 2 | 3)[] = [];
+      if (phase === "cut" && state.cutFormat === "series") {
+        // Sides first (the higher seed picks), then games 1-2, then game 3 if the match is level.
+        if (m.corp === null) return;
+        if (m.g1 === null) games.push(1);
+        if (m.g2 === null) games.push(2);
+        if (needsDecider(m) && m.g3 == null) games.push(3);
+      } else {
+        if (m.g1 === null) games.push(1);
+        if (phase === "swiss" && state.format === "double" && m.g2 === null) games.push(2);
+      }
       if (games.length) out.push({ phase, round: ri, match: mi, a: m.a, b: m.b, games });
     });
   };
@@ -88,10 +96,11 @@ export async function pendingReports(db: Tx, loaded: LoadedEvent): Promise<Map<s
   for (const r of reports) {
     const key = matchKey(PHASE_ENGINE[r.phase], r.round, r.match);
     const m = open.get(key);
-    if (!m || m.a !== r.aEntrantId || m.b !== r.bEntrantId || !m.games.includes(r.game as 1 | 2)) continue;
+    if (!m || m.a !== r.aEntrantId || m.b !== r.bEntrantId || !m.games.includes(r.game as 1 | 2 | 3))
+      continue;
     const entry = out.get(key) ?? { reports: [], status: {} };
     entry.reports.push({
-      game: r.game as 1 | 2,
+      game: r.game as 1 | 2 | 3,
       reporterId: r.reporterId,
       reporterName: r.reporter.runnerName,
       result: r.result,
@@ -99,7 +108,7 @@ export async function pendingReports(db: Tx, loaded: LoadedEvent): Promise<Map<s
     out.set(key, entry);
   }
   for (const entry of out.values()) {
-    for (const g of [1, 2] as const) {
+    for (const g of [1, 2, 3] as const) {
       const results = new Set(entry.reports.filter((r) => r.game === g).map((r) => r.result));
       if (results.size === 1) entry.status[g] = [...results][0]!;
       else if (results.size > 1) entry.status[g] = "conflict";
@@ -112,7 +121,7 @@ const reportInput = z.object({
   phase: z.enum(["swiss", "cut"]),
   round: z.coerce.number().int().min(0).max(50),
   match: z.coerce.number().int().min(0).max(500),
-  game: z.coerce.number().pipe(z.union([z.literal(1), z.literal(2)])),
+  game: z.coerce.number().pipe(z.union([z.literal(1), z.literal(2), z.literal(3)])),
   /** From the reporter's point of view. */
   outcome: z.enum(["win", "tie", "loss"]),
 });
@@ -186,13 +195,18 @@ export async function opApproveAgreedReports(
   const id = z.string().min(1).max(64).safeParse(eventId);
   if (!id.success) return { ok: false as const, error: "Event not found." };
   const pending = await pendingReports(db, await loadEvent(db, id.data));
-  const toApply: { phase: "swiss" | "cut"; round: number; match: number; game: 1 | 2; result: GameResult }[] =
-    [];
+  const toApply: {
+    phase: "swiss" | "cut";
+    round: number;
+    match: number;
+    game: 1 | 2 | 3;
+    result: GameResult;
+  }[] = [];
   // Approved reports per player (for the Reporter badge).
   const approvedBy = new Map<string, number>();
   for (const [key, entry] of pending) {
     const [phase, round, match] = key.split(":") as ["swiss" | "cut", string, string];
-    for (const g of [1, 2] as const) {
+    for (const g of [1, 2, 3] as const) {
       const st = entry.status[g];
       if (st && st !== "conflict") {
         toApply.push({ phase, round: Number(round), match: Number(match), game: g, result: st });

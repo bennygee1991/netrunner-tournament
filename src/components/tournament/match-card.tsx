@@ -1,4 +1,5 @@
-import { byePoints } from "@/engine";
+import { ROUND_MINUTES, byePoints } from "@/engine";
+import { RoundClock } from "./round-clock";
 import { cx } from "@/components/ui";
 import type { MatchView } from "@/lib/tournament/queries";
 
@@ -72,7 +73,10 @@ export function GameLine({
   );
 }
 
-/** Read-only match: one line (single-sided / cut) or two lines (double-sided, sides swap in game 2). */
+/**
+ * Read-only match: one line (single-sided / single-game cut), two lines (double-sided, sides swap
+ * in game 2), or a series cut match (games 1-2 plus a decider when level).
+ */
 export function MatchCard({ match, double, table }: { match: MatchView; double: boolean; table?: number }) {
   if (!match.b) {
     return (
@@ -84,6 +88,53 @@ export function MatchCard({ match, double, table }: { match: MatchView; double: 
   }
   const corpIsA = match.corpId === null ? null : match.corpId === match.a.id;
   const awaiting = !!match.reports?.reports.length;
+  if (match.series) {
+    const s = match.series;
+    const picker = s.pickerId === match.a.id ? match.a.name : match.b.name;
+    const winner = s.winnerId ? (s.winnerId === match.a.id ? match.a.name : match.b.name) : null;
+    return (
+      <div className="space-y-1 py-1">
+        {awaiting && (
+          <p className="font-mono text-[11px] text-warn">⏳ Result reported, awaiting organizer approval</p>
+        )}
+        {corpIsA === null ? (
+          <>
+            <GameLine a={match.a.name} b={match.b.name} corpIsA={null} result={null} />
+            <p className="font-mono text-[11px] text-muted">{picker} (higher seed) is picking sides</p>
+          </>
+        ) : (
+          <>
+            <p className="font-mono text-[11px] text-muted uppercase">Game 1 · {picker} picked sides</p>
+            <GameLine a={match.a.name} b={match.b.name} corpIsA={corpIsA} result={match.g1} />
+            <p className="font-mono text-[11px] text-muted uppercase">Game 2 · sides swap</p>
+            <GameLine a={match.a.name} b={match.b.name} corpIsA={!corpIsA} result={match.g2} />
+            {s.decider && (
+              <>
+                <p className="font-mono text-[11px] text-warn uppercase">
+                  Game 3 · decider · coin flip sides
+                </p>
+                {s.g3 === null && s.deciderClock && (
+                  <RoundClock
+                    label="Game 3 clock"
+                    clock={s.deciderClock}
+                    limitMin={ROUND_MINUTES.cutDecider}
+                    compact
+                  />
+                )}
+                <GameLine
+                  a={match.a.name}
+                  b={match.b.name}
+                  corpIsA={s.corp3Id === null ? null : s.corp3Id === match.a.id}
+                  result={s.g3}
+                />
+              </>
+            )}
+          </>
+        )}
+        {winner && <p className="font-mono text-xs text-ok">{winner} wins the match</p>}
+      </div>
+    );
+  }
   return (
     <div className="space-y-1 py-1">
       {awaiting && (

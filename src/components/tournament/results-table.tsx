@@ -5,22 +5,21 @@ export function ResultsTable({
   results,
   nameOf,
   profileOf = () => null,
+  noPoints = false,
 }: {
   results: Map<string, EventResult>;
   nameOf: (id: string) => string;
   /** Runner name to link to, for account holders. */
   profileOf?: (id: string) => string | null;
+  /** One-off events: placings only, no league points. */
+  noPoints?: boolean;
 }) {
+  const caption = noPoints ? "Final placings" : "League points earned";
   const rows = [...results].sort((a, b) => b[1].points - a[1].points || a[1].rank - b[1].rank);
   return (
-    <div
-      className="overflow-x-auto"
-      tabIndex={0}
-      role="region"
-      aria-label="League points earned (scrolls sideways)"
-    >
+    <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={`${caption} (scrolls sideways)`}>
       <table className="w-full border-collapse font-mono text-sm">
-        <caption className="sr-only">League points earned</caption>
+        <caption className="sr-only">{caption}</caption>
         <thead>
           <tr className="border-b border-border text-[11px] tracking-widest text-muted uppercase">
             <th scope="col" className="p-2 text-left">
@@ -29,9 +28,11 @@ export function ResultsTable({
             <th scope="col" className="p-2 text-left">
               Result
             </th>
-            <th scope="col" className="p-2 text-right">
-              League pts
-            </th>
+            {!noPoints && (
+              <th scope="col" className="p-2 text-right">
+                League pts
+              </th>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -41,7 +42,7 @@ export function ResultsTable({
                 <PlayerLink name={nameOf(id)} profile={profileOf(id)} />
               </td>
               <td className={r.label === "Champion" ? "p-2 text-warn" : "p-2"}>{r.label}</td>
-              <td className="p-2 text-right font-bold text-cyan">+{r.points}</td>
+              {!noPoints && <td className="p-2 text-right font-bold text-cyan">+{r.points}</td>}
             </tr>
           ))}
         </tbody>

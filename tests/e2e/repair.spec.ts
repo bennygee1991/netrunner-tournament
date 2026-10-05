@@ -41,7 +41,7 @@ test("set up an event to repair", async ({ page }) => {
     await expect(page.getByText(`Added ${g} (walk-in guest).`)).toBeVisible();
   }
   await page.getByLabel("Swiss rounds").fill("3");
-  await page.getByLabel("Top cut", { exact: true }).selectOption("0");
+  await page.getByRole("radio", { name: /^None/ }).check();
   await page.getByRole("button", { name: "Save event" }).click();
   await expect(page.getByText("Event saved.")).toBeVisible();
   await page.getByRole("button", { name: "Start Swiss" }).click();

@@ -11,6 +11,7 @@ export const STORED_TROPHIES: Record<string, { label: string; icon: string; orde
   "month1-champion": { label: "Month 1 champion", icon: "🗓️", order: 5 },
   "month2-champion": { label: "Month 2 champion", icon: "🗓️", order: 5 },
   "event-champion": { label: "Event champion", icon: "⭐", order: 6 },
+  "oneoff-champion": { label: "One-off champion", icon: "🎪", order: 7 },
 };
 
 export const BADGE_GROUPS: { group: BadgeGroup; label: string }[] = [
@@ -18,6 +19,7 @@ export const BADGE_GROUPS: { group: BadgeGroup; label: string }[] = [
   { group: "attendance", label: "Turning up" },
   { group: "results", label: "Playing well" },
   { group: "sides", label: "Corp and Runner" },
+  { group: "oneoff", label: "One-off events" },
   { group: "community", label: "Community" },
 ];
 
@@ -62,10 +64,12 @@ export async function loadBadges(db: PrismaClient): Promise<BadgeSummary> {
         cutSeed: true,
         cutSize: true,
         cutDraws: true,
+        cutLosses: true,
         lostFirstRound: true,
         corpWins: true,
         runnerWins: true,
         opponentIds: true,
+        oneOff: true,
       },
     }),
     db.trophy.groupBy({
@@ -83,11 +87,12 @@ export async function loadBadges(db: PrismaClient): Promise<BadgeSummary> {
   const byUserRecords = new Map<string, BadgeRecord[]>();
   for (const r of records) {
     const seasonKey = r.seasonId ?? r.seasonName;
-    if (!seenEvents.has(r.eventKey)) {
+    // One-off events are outside the league order (no seasons, no back-to-back).
+    if (!r.oneOff && !seenEvents.has(r.eventKey)) {
       seenEvents.add(r.eventKey);
       eventOrder.push(r.eventKey);
     }
-    if (!seenSeasons.has(seasonKey)) {
+    if (!r.oneOff && !seenSeasons.has(seasonKey)) {
       seenSeasons.add(seasonKey);
       seasonOrder.push(seasonKey);
     }

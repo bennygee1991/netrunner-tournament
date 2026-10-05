@@ -70,3 +70,14 @@ numbers, comparing pairings, sides, standings, SoS, event points and leaderboard
 
 - Sign-ups: every sign-up is approved by the admin into an entrant ("import sign-ups" in the prototype).
 - Guest claim: admin links a guest's entrant records to an account in `/admin/players`.
+- League season format (2026-10-04): events 1-3 Swiss only (3 rounds); the finale plays 3 Swiss
+  rounds and a top 4 cut seeded from its own Swiss standings, worth double points. The finale's
+  Swiss round count (3) was chosen to match the other events; the organizer can change it.
+- Series cut matches (2026-10-04, house rule): the higher seed picks sides for game 1, sides swap
+  for game 2, a coin flip sets sides for a deciding game 3 when level. A tied game counts for
+  neither player; a tied game 3 advances the higher seed (same as single-game cuts). Sides can be
+  changed until a result is in. Single-game cuts (prototype behaviour) stay available per event.
+- One-off events (2026-10-04): no league points; own trophy and badges ("others on theme" chosen as
+  Headliner and Crossover). One-off records store 0 points and season name "One-off".
+- Round clock (2026-10-04): organizer-started; limits 45/65 Swiss, 65 + 45 (decider) per series cut
+  match. A single-game cut match uses 45 (owner did not specify; single-sided time).

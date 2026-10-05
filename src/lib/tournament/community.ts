@@ -115,6 +115,9 @@ export async function getHallOfChampions(db: PrismaClient) {
       player: player(t.userId, t.playerName),
     }));
 
+  const oneOffChampions = trophies
+    .filter((t) => t.kind === "oneoff-champion")
+    .map((t) => ({ id: t.id, eventName: t.eventName ?? "Event", player: player(t.userId, t.playerName) }));
   const monthChampions = trophies
     .filter((t) => t.kind === "month1-champion" || t.kind === "month2-champion")
     .map((t) => ({
@@ -138,6 +141,7 @@ export async function getHallOfChampions(db: PrismaClient) {
   return {
     seasons: [...seasons.values()],
     monthChampions,
+    oneOffChampions,
     eventChampions: eventChampions.map((e) => ({ ...e, finale: finaleChampions.has(e.finaleKey) })),
     badges,
   };

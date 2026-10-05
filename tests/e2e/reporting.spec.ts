@@ -29,7 +29,7 @@ test("organizer starts an event with two account players", async ({ page }) => {
     await expect(page.getByText(`Added ${name}.`)).toBeVisible();
   }
   await page.getByLabel("Swiss rounds").fill("1");
-  await page.getByLabel("Top cut", { exact: true }).selectOption("0");
+  await page.getByRole("radio", { name: /^None/ }).check();
   await page.getByRole("button", { name: "Save event" }).click();
   await expect(page.getByText("Event saved.")).toBeVisible();
   await page.getByRole("button", { name: "Start Swiss" }).click();

@@ -110,14 +110,17 @@ public, so say "taken"), security headers, admin routes behind role check in mid
     undefeated Swiss (finished an event's Swiss with no game lost).
 - **No email**: no notifications and no email password reset. Password resets are admin-only.
 
-## 10. Season finale (owner decision, 2026-10-04)
-- The last event of a season is the **Season finale** (created automatically; any event can be
-  marked as the finale in setup before it starts).
-- Format: 1 Swiss round for everyone, then a top 8 cut (single elimination until double
-  elimination is built).
-- The cut is decided by the **Season board** (finished events so far): top 8 by season points,
-  then event wins; ties broken by the finale's Swiss standings. Seeds fixed when the cut starts.
-- League points from the finale are doubled on the Month 2 and Season boards.
+## 10. League season format (owner decisions, 2026-10-04)
+- Events 1-3: Swiss only, 3 rounds, points per win, no cut.
+- Event 4, the **Season finale**: 3 Swiss rounds, then a top 4 cut seeded from its own Swiss
+  standings; league points doubled on the Month 2 and Season boards. (This replaces the earlier
+  rule that the finale cut came from the Season board.)
+- Cut matches ("series" format, house rule): the higher seed picks sides for game 1 (the player on
+  their phone, or the organizer); sides swap for game 2; if level after two games (ties count for
+  neither player), game 3 decides with sides set by a coin flip; a tied game 3 advances the higher
+  seed. Single elimination.
+- All of this is the default when a season is created and can be changed per event before it
+  starts (cut size, cut format, rounds, finale flag).
 
 ## 11. Trophies and badges (owner decision, 2026-10-04)
 - Playing-based only; no organizer-given awards. Definitions live in `src/engine/badges.ts`
@@ -133,3 +136,17 @@ public, so say "taken"), security headers, admin routes behind role check in mid
   what the migration could recover.
 - Rarity is "held by N of M players" (M = active accounts with at least one finished event).
   Players see their locked badges on their own profile and feature up to 3 next to their name.
+
+## 12. One-off events and the round clock (owner decisions, 2026-10-04)
+- **One-off events**: created by the organizer outside any season with the same format toggles
+  (single/double-sided Swiss, rounds, cut size, cut format). No league points; results are kept on
+  profiles. Trophy: One-off champion. Badges: Wildcard (1), Globetrotter (5), World tour (10),
+  Special guest (made a one-off cut), Crossover (league + one-off), Headliner trophy (3 one-off
+  wins). League attendance and season badges count season events only; playing badges (cuts, sides,
+  Mentor, Perfect event, Underdog) count both. One-offs can be deleted with typed confirmation.
+- **Format toggles** are the same everywhere: season creation (per event, pre-set to the league
+  format), event setup and one-off creation.
+- **Round clock** (house rule): 45 minutes single-sided Swiss, 65 double-sided; cut: 65 minutes per
+  series match for games 1-2 plus 45 for a deciding game 3 (its own clock), 45 for a single-game cut
+  match. The organizer starts it once players are seated and can pause, add a minute or restart.
+  Shown live on the event page and flowchart. What happens at time is unchanged (Rules page).

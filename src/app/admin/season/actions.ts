@@ -11,7 +11,16 @@ import { createSeason, updatePrizes } from "@/lib/tournament/season";
 export async function createSeasonAction(_prev: FormState, form: FormData): Promise<FormState> {
   const actor = await adminActor();
   const input = { name: str(form, "name"), firstDate: str(form, "firstDate") };
-  const result = await createSeason(db, actor, input);
+  // Per-event format toggles (e1.* .. e4.*); omitted entirely if the form had none.
+  const events = form.has("e1.matchFormat")
+    ? [1, 2, 3, 4].map((n) => ({
+        matchFormat: str(form, `e${n}.matchFormat`),
+        swissRounds: str(form, `e${n}.swissRounds`),
+        cutSize: str(form, `e${n}.cutSize`),
+        cutFormat: str(form, `e${n}.cutFormat`),
+      }))
+    : undefined;
+  const result = await createSeason(db, actor, { ...input, events });
   if (!result.ok) return { error: result.error, fieldErrors: result.fieldErrors, values: input };
   revalidatePath("/", "layout");
   return { message: "Season created with 4 events." };

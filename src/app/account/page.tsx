@@ -109,7 +109,7 @@ export default async function AccountPage({ searchParams }: PageProps<"/account"
                   </span>
                   <span className="text-right font-mono text-sm">
                     <span className="block">{r.placing}</span>
-                    <span className="block text-cyan">+{r.points}</span>
+                    <span className="block text-cyan">{r.oneOff ? "one-off" : `+${r.points}`}</span>
                   </span>
                 </li>
               ))}
