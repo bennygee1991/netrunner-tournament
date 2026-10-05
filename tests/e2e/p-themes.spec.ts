@@ -6,7 +6,22 @@ import { register, uniqueName } from "./fixtures";
 // contrast). Runs after event-flow (so there is an event with a flowchart) and before repair.
 test.setTimeout(240_000);
 
-const THEMES = ["synthwave", "neon", "cyberpunk", "matrix", "vaporwave", "ember", "ocean", "amber"];
+const THEMES = [
+  "synthwave",
+  "neon",
+  "cyberpunk",
+  "matrix",
+  "vaporwave",
+  "ember",
+  "ocean",
+  "amber",
+  "cityscape",
+  "tokyo",
+  "chrome",
+  "bloodmoon",
+  "hologram",
+  "candy",
+];
 
 test("every theme passes accessibility checks on the main pages", async ({ page }) => {
   await register(page, uniqueName("Looks"));
