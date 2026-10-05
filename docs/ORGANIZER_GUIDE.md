@@ -56,7 +56,7 @@ events), and click **Create one-off event**. One-offs:
 - give **no league points** (they never touch the leaderboards);
 - award the 🎪 **One-off champion** trophy and the one-off badges (Wildcard, Globetrotter,
   World tour, Special guest, Crossover, and the 🎤 Headliner trophy for 3 one-off wins);
-- can be deleted from the bottom of their admin page by typing the event name.
+- can be deleted with the **Delete event** button at the bottom of their admin page (tap it twice to confirm).
 
 ## 3. Sign-ups
 

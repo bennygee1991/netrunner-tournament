@@ -143,7 +143,7 @@ public, so say "taken"), security headers, admin routes behind role check in mid
   profiles. Trophy: One-off champion. Badges: Wildcard (1), Globetrotter (5), World tour (10),
   Special guest (made a one-off cut), Crossover (league + one-off), Headliner trophy (3 one-off
   wins). League attendance and season badges count season events only; playing badges (cuts, sides,
-  Mentor, Perfect event, Underdog) count both. One-offs can be deleted with typed confirmation.
+  Mentor, Perfect event, Underdog) count both. One-offs can be deleted with a two-tap button (audited).
 - **Format toggles** are the same everywhere: season creation (per event, pre-set to the league
   format), event setup and one-off creation.
 - **Round clock** (house rule): 45 minutes single-sided Swiss, 65 double-sided; cut: 65 minutes per

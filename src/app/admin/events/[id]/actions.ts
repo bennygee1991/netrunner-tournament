@@ -206,7 +206,7 @@ export async function pickSidesAction(_p: FormState, form: FormData): Promise<Fo
 export async function deleteOneOffAction(_p: FormState, form: FormData): Promise<FormState> {
   const actor = await adminActor();
   const eventId = str(form, "eventId");
-  const res = await deleteOneOffEvent(db, actor, eventId, str(form, "confirm"));
+  const res = await deleteOneOffEvent(db, actor, eventId);
   if (!res.ok) return { error: res.error };
   revalidatePath("/events");
   revalidatePath("/admin/events");
