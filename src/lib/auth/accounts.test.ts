@@ -19,6 +19,7 @@ import {
 } from "./accounts";
 import { createSession, validateSession } from "./sessions";
 import { SESSION_REFRESH_MS, hashToken } from "./tokens";
+import { THEME_VALUES } from "../themes";
 
 const GOOD = "violet-mainframe-42";
 const reg = (runnerName: string, extra: Record<string, string> = {}) => ({
@@ -225,7 +226,15 @@ describe.skipIf(!hasTestDb)("accounts (database)", () => {
       const user = await db.user.findUniqueOrThrow({ where: { id: r.userId } });
       expect(readPrefs(user.prefs).theme).toBe("light");
       expect(user.email).toBe("a@b.co");
-      expect((await updateProfile(db, r.userId, { theme: "neon", email: "" })).ok).toBe(false);
+      expect((await updateProfile(db, r.userId, { theme: "hot-pink-unicorn", email: "" })).ok).toBe(false);
+      // Every site theme can be saved and read back.
+      for (const theme of THEME_VALUES) {
+        expect(await updateProfile(db, r.userId, { theme, email: "" })).toEqual({ ok: true });
+        expect(readPrefs((await db.user.findUniqueOrThrow({ where: { id: r.userId } })).prefs).theme).toBe(
+          theme,
+        );
+      }
+      await updateProfile(db, r.userId, { theme: "light", email: "a@b.co" });
       expect(await updateProfile(db, r.userId, { theme: "light", email: "", avatar: "eye-cyan" })).toEqual({
         ok: true,
       });

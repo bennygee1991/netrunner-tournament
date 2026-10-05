@@ -79,11 +79,34 @@ test("change password logs in with the new one", async ({ page }) => {
 
 test("theme preference is applied", async ({ page }) => {
   await register(page, uniqueName("Theme"));
-  await page.getByLabel("Light").check();
+  await page.getByRole("radio", { name: "Classic light" }).check();
   await page.getByRole("button", { name: "Save profile" }).click();
   await expect(page.getByText("Saved.")).toBeVisible();
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+});
+
+test("a site theme previews instantly, saves to the profile and applies to every page", async ({ page }) => {
+  await register(page, uniqueName("Synth"));
+  const html = page.locator("html");
+  const bg = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  const before = await bg();
+
+  // Tapping a theme previews it straight away (not saved yet).
+  await page.getByRole("radio", { name: "Synthwave" }).check();
+  await expect(html).toHaveAttribute("data-theme", "synthwave");
+  expect(await bg()).not.toBe(before);
+
+  await page.getByRole("button", { name: "Save profile" }).click();
+  await expect(page.getByText("Saved.")).toBeVisible();
+
+  // Saved: it follows the player to every page, after a reload and when logged back in.
+  for (const path of ["/", "/events", "/leaderboards", "/players", "/trophies", "/rules", "/account"]) {
+    await page.goto(path);
+    await expect(html, path).toHaveAttribute("data-theme", "synthwave");
+  }
+  // The browser chrome colour follows the theme too.
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#140b2e");
 });
 
 test("players cannot reach the admin area", async ({ page }) => {
