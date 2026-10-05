@@ -7,6 +7,7 @@ import { LIMITS, clear, consume, peek, sweepExpired } from "../rate-limit";
 import { passwordProblem, runnerNameKey, runnerNameSchema } from "../validation";
 import { createSession, deleteUserSessions } from "./sessions";
 import { newTempPassword } from "./tokens";
+import { THEME_VALUES } from "../themes";
 
 export type FieldErrors = Partial<Record<string, string>>;
 export type Fail = { ok: false; error?: string; fieldErrors?: FieldErrors };
@@ -169,7 +170,7 @@ export async function changePassword(
 // ---------------------------------------------------------------- preferences
 
 export const prefsSchema = z.object({
-  theme: z.enum(["system", "dark", "light"]).default("system"),
+  theme: z.enum(THEME_VALUES).default("system"),
 });
 export type Prefs = z.infer<typeof prefsSchema>;
 
@@ -181,7 +182,7 @@ export function readPrefs(value: unknown): Prefs {
 export const BIO_MAX = 280;
 
 const profileInput = z.object({
-  theme: z.enum(["system", "dark", "light"]),
+  theme: z.enum(THEME_VALUES),
   email: optionalEmail,
   bio: z
     .string()

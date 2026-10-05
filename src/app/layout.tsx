@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { SiteHeader } from "@/components/site-header";
 import { readPrefs } from "@/lib/auth/accounts";
 import { getCurrentUser } from "@/lib/auth/server";
+import { THEME_COLOR } from "@/lib/themes";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -9,14 +10,22 @@ export const metadata: Metadata = {
   description: "Netrunner league: events, Swiss and top-cut brackets, leaderboards.",
 };
 
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  themeColor: [
-    { media: "(prefers-color-scheme: dark)", color: "#07090f" },
-    { media: "(prefers-color-scheme: light)", color: "#f5f7fb" },
-  ],
-};
+export async function generateViewport(): Promise<Viewport> {
+  // Browser chrome follows the signed-in player's theme; others get dark or light by device.
+  const user = await getCurrentUser();
+  const theme = user ? readPrefs(user.prefs).theme : "system";
+  return {
+    width: "device-width",
+    initialScale: 1,
+    themeColor:
+      theme === "system"
+        ? [
+            { media: "(prefers-color-scheme: dark)", color: THEME_COLOR.dark },
+            { media: "(prefers-color-scheme: light)", color: THEME_COLOR.light },
+          ]
+        : THEME_COLOR[theme],
+  };
+}
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const user = await getCurrentUser();

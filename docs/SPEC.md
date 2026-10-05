@@ -150,3 +150,16 @@ public, so say "taken"), security headers, admin routes behind role check in mid
   series match for games 1-2 plus 45 for a deciding game 3 (its own clock), 45 for a single-game cut
   match. The organizer starts it once players are seated and can pause, add a minute or restart.
   Shown live on the event page and flowchart. What happens at time is unchanged (Rules page).
+
+## 13. Site themes (owner request, 2026-10-05)
+- Each player picks a **site theme** on their Account page; it is saved on the account (`prefs.theme`)
+  and applied to every page via `data-theme` on `<html>`. Picking a card previews it instantly;
+  leaving without saving reverts. Logged-out visitors get classic dark or light by their device.
+- Themes: Match my device, Classic dark, Classic light, Synthwave, Neon, Cyberpunk, Matrix,
+  Vaporwave (light), Ember, Deep sea, Amber terminal.
+- Colours are defined once in `src/lib/themes.ts` and mirrored in `globals.css` (generated). A unit
+  test checks every theme for WCAG AA contrast (4.5:1 on all surfaces, button labels on accent
+  fills) and that the CSS matches; an e2e test runs axe on the main pages in every theme.
+- To add a theme: add it to `THEMES`, `THEME_COLOR` and `THEME_TOKENS`, add a block to `globals.css`
+  (same values), run the tests. Avatars keep their own fixed colours so a player looks the same
+  to everyone.

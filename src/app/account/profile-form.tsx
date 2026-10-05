@@ -4,15 +4,10 @@ import { useActionState } from "react";
 import { SubmitButton } from "@/components/submit-button";
 import { Field, FormMessage } from "@/components/ui";
 import { Avatar } from "@/components/avatar";
+import { ThemePicker } from "@/components/theme-picker";
 import { AVATAR_KEYS, avatarLabel } from "@/lib/avatars";
 import { initialFormState } from "@/lib/forms/state";
 import { updateProfileAction } from "./actions";
-
-const THEMES = [
-  { value: "system", label: "Match my device" },
-  { value: "dark", label: "Dark" },
-  { value: "light", label: "Light" },
-] as const;
 
 export function ProfileForm({
   theme,
@@ -68,26 +63,7 @@ export function ProfileForm({
         </div>
         {fe.avatar && <p className="mt-1 text-sm text-danger">{fe.avatar}</p>}
       </fieldset>
-      <fieldset className="mb-4">
-        <legend className="mb-2 font-mono text-xs tracking-widest text-muted uppercase">Theme</legend>
-        <div className="flex flex-wrap gap-2">
-          {THEMES.map((t) => (
-            <label
-              key={t.value}
-              className="flex min-h-11 items-center gap-2 rounded border border-border px-3 has-[:checked]:border-cyan"
-            >
-              <input
-                type="radio"
-                name="theme"
-                value={t.value}
-                defaultChecked={currentTheme === t.value}
-                className="accent-cyan"
-              />
-              {t.label}
-            </label>
-          ))}
-        </div>
-      </fieldset>
+      <ThemePicker saved={theme} selected={currentTheme} />
       <Field
         label="Email (optional)"
         name="email"
