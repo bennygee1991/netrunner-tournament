@@ -4,9 +4,10 @@
  * Netrunner Circuit theme tokens.
  * Dark cyberpunk by default; light when the device prefers light (unless the user forced dark),
  * or when the user picked a theme in their Account preferences (data-theme on <html>, one block
- * per theme below). The theme blocks are generated from src/lib/themes.ts, which a unit test
- * checks for WCAG AA contrast; edit the colours there and regenerate, not here.
- * --bg-fx is an optional decorative layer drawn over the page background.
+ * per theme below). The colours in each block are mirrored in src/lib/themes.ts, where a unit test
+ * checks WCAG AA contrast and that the two agree: change both together.
+ * --bg-fx is an optional decorative layer drawn over the page background (with optional
+ * --bg-fx-pos / --bg-fx-size / --bg-fx-repeat per layer).
  */
 :root {
   --bg: #07090f;
@@ -63,7 +64,7 @@
   color-scheme: light;
 }
 
-/* --- Selectable themes (generated from src/lib/themes.ts) --- */
+/* --- Selectable themes (colours mirrored in src/lib/themes.ts) --- */
 :root[data-theme="synthwave"] {
   --bg: #140b2e;
   --surface: #1d1142;
@@ -214,6 +215,140 @@
   color-scheme: dark;
 }
 
+/* A skyline along the bottom of the screen (inline SVG) under a pink dusk glow. */
+:root[data-theme="cityscape"] {
+  --bg: #0b1020;
+  --surface: #121a30;
+  --surface-2: #1a2442;
+  --border: #33437a;
+  --fg: #eef2ff;
+  --muted: #a9b4dc;
+  --cyan: #4de8ff;
+  --magenta: #ff5fa8;
+  --accent-fg: #0b1020;
+  --ok: #5cf0a8;
+  --warn: #ffd45e;
+  --danger: #ff7a8c;
+  --glow: none;
+  --bg-fx:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='220' viewBox='0 0 640 220'%3E%3Cg fill='%2305070f'%3E%3Crect x='0' y='120' width='46' height='100'/%3E%3Crect x='50' y='70' width='38' height='150'/%3E%3Crect x='92' y='140' width='54' height='80'/%3E%3Crect x='150' y='40' width='34' height='180'/%3E%3Crect x='188' y='100' width='60' height='120'/%3E%3Crect x='252' y='150' width='40' height='70'/%3E%3Crect x='296' y='60' width='44' height='160'/%3E%3Crect x='344' y='110' width='36' height='110'/%3E%3Crect x='384' y='30' width='30' height='190'/%3E%3Crect x='418' y='90' width='58' height='130'/%3E%3Crect x='480' y='130' width='42' height='90'/%3E%3Crect x='526' y='55' width='40' height='165'/%3E%3Crect x='570' y='105' width='70' height='115'/%3E%3C/g%3E%3Cg%3E%3Crect x='58' y='90' width='6' height='8' fill='%2336e6ff' opacity='.95'/%3E%3Crect x='70' y='110' width='6' height='8' fill='%23ff5fa8' opacity='.95'/%3E%3Crect x='158' y='60' width='6' height='8' fill='%23ffd45e' opacity='.9'/%3E%3Crect x='170' y='84' width='6' height='8' fill='%2336e6ff' opacity='.95'/%3E%3Crect x='196' y='120' width='6' height='8' fill='%23ff5fa8' opacity='.9'/%3E%3Crect x='304' y='80' width='6' height='8' fill='%2336e6ff' opacity='.95'/%3E%3Crect x='318' y='104' width='6' height='8' fill='%23ffd45e' opacity='.9'/%3E%3Crect x='390' y='52' width='6' height='8' fill='%23ff5fa8' opacity='.95'/%3E%3Crect x='402' y='76' width='6' height='8' fill='%2336e6ff' opacity='.9'/%3E%3Crect x='430' y='110' width='6' height='8' fill='%23ffd45e' opacity='.9'/%3E%3Crect x='534' y='76' width='6' height='8' fill='%2336e6ff' opacity='.95'/%3E%3Crect x='580' y='125' width='6' height='8' fill='%23ff5fa8' opacity='.9'/%3E%3C/g%3E%3C/svg%3E"),
+    linear-gradient(to top, rgb(255 95 168 / 0.38), rgb(120 70 200 / 0.14) 35%, transparent 60%);
+  --bg-fx-pos: left bottom, 0 0;
+  --bg-fx-size: 800px 275px, auto;
+  --bg-fx-repeat: repeat-x, no-repeat;
+  color-scheme: dark;
+}
+
+/* Slanted rain over pink and teal sign reflections on the street. */
+:root[data-theme="tokyo"] {
+  --bg: #080b14;
+  --surface: #101626;
+  --surface-2: #182036;
+  --border: #2c3a62;
+  --fg: #e8eeff;
+  --muted: #9aa8d0;
+  --cyan: #ff4f8b;
+  --magenta: #35e0d0;
+  --accent-fg: #080b14;
+  --ok: #5cf0a8;
+  --warn: #ffd45e;
+  --danger: #ff8a8a;
+  --glow: none;
+  --bg-fx:
+    repeating-linear-gradient(103deg, rgb(160 190 255 / 0.05) 0 1px, transparent 1px 11px),
+    radial-gradient(ellipse 70% 30% at 20% 100%, rgb(255 79 139 / 0.2), transparent 70%),
+    radial-gradient(ellipse 70% 30% at 85% 100%, rgb(53 224 208 / 0.16), transparent 70%);
+  color-scheme: dark;
+}
+
+/* Brushed metal grain with a bright top edge. */
+:root[data-theme="chrome"] {
+  --bg: #14171c;
+  --surface: #1d2128;
+  --surface-2: #272c35;
+  --border: #4a5260;
+  --fg: #f0f3f7;
+  --muted: #aab3c2;
+  --cyan: #9ad8ff;
+  --magenta: #ffb27a;
+  --accent-fg: #14171c;
+  --ok: #7be0a0;
+  --warn: #ffd45e;
+  --danger: #ff7a7a;
+  --glow: none;
+  --bg-fx:
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 0.025) 0 1px, transparent 1px 4px),
+    linear-gradient(to bottom, rgb(154 216 255 / 0.1), transparent 30%);
+  color-scheme: dark;
+}
+
+/* A blood-red moon glowing in the top right corner. */
+:root[data-theme="bloodmoon"] {
+  --bg: #0e0406;
+  --surface: #190809;
+  --surface-2: #240c0f;
+  --border: #5c1a22;
+  --fg: #ffe9e6;
+  --muted: #d19a9a;
+  --cyan: #ff4d5e;
+  --magenta: #ffe3b3;
+  --accent-fg: #0e0406;
+  --ok: #6be08f;
+  --warn: #ffd04a;
+  --danger: #ff8f9c;
+  --glow: none;
+  --bg-fx: radial-gradient(
+    circle at 88% 4%,
+    rgb(255 110 110 / 0.38) 0,
+    rgb(255 77 94 / 0.12) 9%,
+    transparent 32%
+  );
+  color-scheme: dark;
+}
+
+/* Holographic sheen: a colour sweep with fine scan lines. */
+:root[data-theme="hologram"] {
+  --bg: #0a0b1e;
+  --surface: #121432;
+  --surface-2: #1b1e47;
+  --border: #3b3f93;
+  --fg: #eef0ff;
+  --muted: #aeb4ff;
+  --cyan: #5ffbf1;
+  --magenta: #b69cff;
+  --accent-fg: #0a0b1e;
+  --ok: #6df0a8;
+  --warn: #ffe066;
+  --danger: #ff7b9c;
+  --glow: none;
+  --bg-fx:
+    repeating-linear-gradient(to bottom, rgb(255 255 255 / 0.03) 0 1px, transparent 1px 4px),
+    linear-gradient(120deg, rgb(95 251 241 / 0.12), rgb(182 156 255 / 0.12) 50%, rgb(255 140 220 / 0.1));
+  color-scheme: dark;
+}
+
+/* Bright pastel sweets (light theme). */
+:root[data-theme="candy"] {
+  --bg: #fff3fa;
+  --surface: #ffffff;
+  --surface-2: #ffe6f3;
+  --border: #f2b8d9;
+  --fg: #3a1236;
+  --muted: #7a4a72;
+  --cyan: #b3125f;
+  --magenta: #5a3fd1;
+  --accent-fg: #ffffff;
+  --ok: #0c7a4a;
+  --warn: #8a5200;
+  --danger: #c01f45;
+  --glow: none;
+  --bg-fx:
+    radial-gradient(circle at 10% 8%, rgb(255 170 215 / 0.55), transparent 35%),
+    radial-gradient(circle at 92% 25%, rgb(170 235 215 / 0.55), transparent 35%),
+    radial-gradient(circle at 30% 100%, rgb(255 230 150 / 0.5), transparent 40%);
+  color-scheme: light;
+}
+
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
@@ -238,6 +373,9 @@ html {
 body {
   background-color: var(--bg);
   background-image: var(--bg-fx);
+  background-position: var(--bg-fx-pos, 0 0);
+  background-size: var(--bg-fx-size, auto);
+  background-repeat: var(--bg-fx-repeat, repeat);
   background-attachment: fixed;
   color: var(--fg);
   font-family: var(--font-sans);

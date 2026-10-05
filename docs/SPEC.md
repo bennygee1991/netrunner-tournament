@@ -156,10 +156,12 @@ public, so say "taken"), security headers, admin routes behind role check in mid
   and applied to every page via `data-theme` on `<html>`. Picking a card previews it instantly;
   leaving without saving reverts. Logged-out visitors get classic dark or light by their device.
 - Themes: Match my device, Classic dark, Classic light, Synthwave, Neon, Cyberpunk, Matrix,
-  Vaporwave (light), Ember, Deep sea, Amber terminal.
-- Colours are defined once in `src/lib/themes.ts` and mirrored in `globals.css` (generated). A unit
+  Vaporwave (light), Ember, Deep sea, Amber terminal, Cityscape (night skyline), Rainy Tokyo,
+  Chrome, Blood moon, Hologram, Candy (light).
+- Colours are defined in `src/lib/themes.ts` and mirrored in `globals.css`. A unit
   test checks every theme for WCAG AA contrast (4.5:1 on all surfaces, button labels on accent
   fills) and that the CSS matches; an e2e test runs axe on the main pages in every theme.
 - To add a theme: add it to `THEMES`, `THEME_COLOR` and `THEME_TOKENS`, add a block to `globals.css`
-  (same values), run the tests. Avatars keep their own fixed colours so a player looks the same
+  (same values, plus an optional `--bg-fx` backdrop), add it to the list in `tests/e2e/p-themes.spec.ts`,
+  run the tests. Avatars keep their own fixed colours so a player looks the same
   to everyone.
